@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "726581301343",
+    "project_id": "securiodb",
+    "storage_bucket": "securiodb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:726581301343:android:de32726fc9c25cddf54bea",
+        "android_client_info": {
+          "package_name": "com.example.securiodb"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAqioaVjUgAI3unVxmBLfdd-Rb3IYk74v4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">SecurioDB</string>
+    <string-array name="visit_purposes">
+        <item>Visitor</item>
+        <item>Delivery</item>
+        <item>Maintenance</item>
+        <item>Other</item>
+    </string-array>
+    <string-array name="roles_array">
+        <item>Guard</item>
+        <item>Owner</item>
+        <item>Admin</item>
+    </string-array>
+</resources>
