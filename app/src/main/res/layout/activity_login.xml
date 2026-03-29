@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
@@ -11,31 +10,34 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
+        <!-- SECTION 1 — Top blue gradient header -->
         <LinearLayout
             android:id="@+id/headerLayout"
             android:layout_width="match_parent"
-            android:layout_height="300dp"
+            android:layout_height="0dp"
             android:background="@drawable/bg_login_gradient"
             android:gravity="center"
             android:orientation="vertical"
             android:padding="32dp"
+            app:layout_constraintHeight_percent="0.4"
             app:layout_constraintTop_toTopOf="parent">
 
             <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
                 android:background="@android:drawable/dialog_holo_light_frame"
                 android:padding="16dp"
                 android:src="@android:drawable/ic_lock_lock"
+                android:backgroundTint="#33FFFFFF"
                 app:tint="@color/white" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:text="Apartment Security"
                 android:textColor="@color/white"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -43,20 +45,22 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Secure. Smart. Simple."
-                android:textColor="#CCFFFFFF"
-                android:textSize="14sp" />
+                android:textColor="#B3FFFFFF"
+                android:textSize="13sp" />
         </LinearLayout>
 
+        <!-- SECTION 2 — White Card (Login Form) -->
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardLogin"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="20dp"
-            android:layout_marginTop="-40dp"
-            android:layout_marginBottom="32dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="-24dp"
+            android:layout_marginBottom="24dp"
             app:cardCornerRadius="16dp"
             app:cardElevation="8dp"
-            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintTop_toBottomOf="@id/headerLayout"
+            app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintVertical_bias="0">
 
             <LinearLayout
@@ -69,19 +73,133 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Welcome Back"
-                    android:textColor="@color/colorPrimaryDark"
-                    android:textSize="20sp"
+                    android:textColor="#1A237E"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="24dp"
+                    android:layout_marginBottom="20dp"
                     android:text="Sign in to your account"
-                    android:textColor="@color/textSecondary"
-                    android:textSize="14sp" />
+                    android:textColor="#757575"
+                    android:textSize="13sp" />
 
+                <!-- ROLE SELECTION SECTION -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:weightSum="3"
+                    android:layout_marginBottom="20dp">
+
+                    <!-- Guard -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardRoleGuard"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#1565C0"
+                        app:strokeWidth="1dp"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="8dp"
+                            android:gravity="center">
+                            <ImageView
+                                android:id="@+id/ivGuard"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@android:drawable/ic_lock_lock"
+                                app:tint="#1565C0" />
+                            <TextView
+                                android:id="@+id/tvGuard"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Guard"
+                                android:textSize="13sp"
+                                android:textColor="#1565C0"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Owner -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardRoleOwner"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginHorizontal="6dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#1565C0"
+                        app:strokeWidth="1dp"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="8dp"
+                            android:gravity="center">
+                            <ImageView
+                                android:id="@+id/ivOwner"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@drawable/ic_home"
+                                app:tint="#1565C0" />
+                            <TextView
+                                android:id="@+id/tvOwner"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Owner"
+                                android:textSize="13sp"
+                                android:textColor="#1565C0"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Admin -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardRoleAdmin"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="#1565C0"
+                        app:strokeWidth="1dp"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="8dp"
+                            android:gravity="center">
+                            <ImageView
+                                android:id="@+id/ivAdmin"
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:src="@android:drawable/ic_menu_manage"
+                                app:tint="#1565C0" />
+                            <TextView
+                                android:id="@+id/tvAdmin"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Admin"
+                                android:textSize="13sp"
+                                android:textColor="#1565C0"/>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+                </LinearLayout>
+
+                <!-- SECTION 3 — INPUT FIELDS -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilEmail"
                     style="@style/InputField"
@@ -89,14 +207,12 @@
                     android:layout_height="wrap_content"
                     android:hint="Email Address"
                     app:startIconDrawable="@android:drawable/ic_dialog_email">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etEmail"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textEmailAddress"
-                        android:textColor="@color/textDark"
-                        android:textSize="15sp" />
+                        android:textColor="#1A1A1A" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <com.google.android.material.textfield.TextInputLayout
@@ -105,16 +221,14 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Password"
-                    app:endIconMode="password_toggle"
+                    app:passwordToggleEnabled="true"
                     app:startIconDrawable="@android:drawable/ic_lock_idle_lock">
-
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etPassword"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:inputType="textPassword"
-                        android:textColor="@color/textDark"
-                        android:textSize="15sp" />
+                        android:textColor="#1A1A1A" />
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <TextView
@@ -123,40 +237,39 @@
                     android:layout_height="wrap_content"
                     android:layout_gravity="end"
                     android:layout_marginTop="4dp"
-                    android:layout_marginBottom="24dp"
                     android:text="Forgot Password?"
-                    android:textColor="@color/colorPrimary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textColor="#1565C0" />
 
                 <ProgressBar
                     android:id="@+id/progressBar"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:layout_marginBottom="16dp"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    android:layout_marginTop="16dp" />
 
+                <!-- SECTION 4 — LOGIN BUTTON -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLogin"
                     android:layout_width="match_parent"
-                    android:layout_height="56dp"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="24dp"
                     android:text="LOGIN"
-                    android:textSize="16sp"
+                    android:textColor="#FFFFFF"
                     android:textStyle="bold"
-                    app:backgroundTint="@color/colorPrimary"
-                    app:cornerRadius="12dp" />
+                    app:backgroundTint="#1565C0"
+                    app:cornerRadius="10dp" />
 
+                <!-- SECTION 5 — REGISTER -->
                 <TextView
                     android:id="@+id/tvRegister"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:layout_marginTop="20dp"
+                    android:layout_marginTop="16dp"
+                    android:padding="8dp"
                     android:text="New here? Create Account"
-                    android:textColor="@color/colorPrimary"
-                    android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textColor="#1565C0" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>

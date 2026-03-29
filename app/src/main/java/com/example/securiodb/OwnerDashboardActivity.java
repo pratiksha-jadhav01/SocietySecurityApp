@@ -3,214 +3,195 @@ package com.example.securiodb;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.securiodb.adapter.VisitorAdapter;
-import com.example.securiodb.model.Visitor;
-import com.google.android.material.snackbar.Snackbar;
-import com.google.android.material.tabs.TabLayout;
-import com.google.android.material.tabs.TabLayoutMediator;
+import com.example.securiodb.models.Visitor;
+import com.google.android.material.badge.BadgeDrawable;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
-public class OwnerDashboardActivity extends AppCompatActivity implements VisitorAdapter.OnVisitorActionListener {
+public class OwnerDashboardActivity extends AppCompatActivity {
 
-    private TextView tvFlatTitle, tvOwnerName, tvStatPending, tvStatApproved, tvStatRejected;
-    private TabLayout tabLayout;
-    private ViewPager2 viewPager;
-    private ImageView ivLogout;
-    private ProgressBar progressBar;
+    private TextView tvFlatHeader, tvOwnerNameHeader, tvStatVisitorsToday, tvStatDeliveriesToday, tvStatPendingCount;
+    private MaterialCardView cardPendingStats;
+    private RecyclerView rvPendingPreview;
+    private BottomNavigationView bottomNav;
+    private View btnSeeAll;
+    private MaterialCardView btnLiveStatus, btnHistory, btnDeliveries, btnContactGuard;
 
+    private FirebaseFirestore db;
     private FirebaseAuth mAuth;
-    private DatabaseReference mDatabase;
-    private String userFlatNumber = "";
-
-    private List<Visitor> pendingList = new ArrayList<>();
-    private List<Visitor> historyList = new ArrayList<>();
-    private VisitorAdapter pendingAdapter, historyAdapter;
+    private String ownerUid, flatNumber;
+    
+    private List<Visitor> pendingPreviewList = new ArrayList<>();
+    private VisitorAdapter adapter;
+    private ListenerRegistration statsListener, pendingListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_owner_dashboard);
 
+        db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
-        mDatabase = FirebaseDatabase.getInstance().getReference();
-
         if (mAuth.getCurrentUser() == null) {
-            startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
+        ownerUid = mAuth.getCurrentUser().getUid();
 
         initViews();
-        setupViewPager();
-        fetchOwnerProfile();
-
-        ivLogout.setOnClickListener(v -> {
-            mAuth.signOut();
-            startActivity(new Intent(this, LoginActivity.class));
-            finish();
-        });
+        fetchOwnerData();
+        setupBottomNav();
     }
 
     private void initViews() {
-        tvFlatTitle = findViewById(R.id.tvFlatTitle);
-        tvOwnerName = findViewById(R.id.tvOwnerName);
-        tvStatPending = findViewById(R.id.tvStatPending);
-        tvStatApproved = findViewById(R.id.tvStatApproved);
-        tvStatRejected = findViewById(R.id.tvStatRejected);
-        tabLayout = findViewById(R.id.tabLayout);
-        viewPager = findViewById(R.id.viewPager);
-        ivLogout = findViewById(R.id.ivLogout);
-        progressBar = findViewById(R.id.progressBar);
+        tvFlatHeader = findViewById(R.id.tvFlatHeader);
+        tvOwnerNameHeader = findViewById(R.id.tvOwnerNameHeader);
+        tvStatVisitorsToday = findViewById(R.id.tvStatVisitorsToday);
+        tvStatDeliveriesToday = findViewById(R.id.tvStatDeliveriesToday);
+        tvStatPendingCount = findViewById(R.id.tvStatPendingRequests);
+        cardPendingStats = findViewById(R.id.cardPendingStats);
+        rvPendingPreview = findViewById(R.id.rvPendingPreview);
+        bottomNav = findViewById(R.id.bottomNav);
+        btnSeeAll = findViewById(R.id.btnSeeAll);
+        
+        btnLiveStatus = findViewById(R.id.btnLiveStatus);
+        btnHistory = findViewById(R.id.btnHistory);
+        btnDeliveries = findViewById(R.id.btnDeliveries);
+        btnContactGuard = findViewById(R.id.btnContactGuard);
+
+        rvPendingPreview.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new VisitorAdapter(pendingPreviewList);
+        rvPendingPreview.setAdapter(adapter);
     }
 
-    private void fetchOwnerProfile() {
-        progressBar.setVisibility(View.VISIBLE);
-        String uid = mAuth.getCurrentUser().getUid();
-        mDatabase.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    String name = snapshot.child("name").getValue(String.class);
-                    userFlatNumber = snapshot.child("flatNumber").getValue(String.class);
-
-                    tvOwnerName.setText(name);
-                    tvFlatTitle.setText("My Apartment — Flat " + userFlatNumber);
-                    
-                    listenForVisitors();
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                progressBar.setVisibility(View.GONE);
-            }
-        });
-    }
-
-    private void listenForVisitors() {
-        mDatabase.child("visitors").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                pendingList.clear();
-                historyList.clear();
-                int pendingCount = 0, approvedCount = 0, rejectedCount = 0;
-
-                for (DataSnapshot data : snapshot.getChildren()) {
-                    Visitor visitor = data.getValue(Visitor.class);
-                    if (visitor != null && userFlatNumber.equals(visitor.flatNumber)) {
-                        if ("Pending".equalsIgnoreCase(visitor.status)) {
-                            pendingList.add(visitor);
-                            pendingCount++;
-                        } else {
-                            historyList.add(visitor);
-                            if ("Approved".equalsIgnoreCase(visitor.status)) approvedCount++;
-                            else if ("Rejected".equalsIgnoreCase(visitor.status)) rejectedCount++;
+    private void fetchOwnerData() {
+        FirebaseDatabase.getInstance().getReference("users").child(ownerUid)
+            .addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(@NonNull DataSnapshot snapshot) {
+                    if (snapshot.exists()) {
+                        flatNumber = snapshot.child("flatNumber").getValue(String.class);
+                        String name = snapshot.child("name").getValue(String.class);
+                        
+                        tvFlatHeader.setText("Flat " + flatNumber + " 🏠");
+                        tvOwnerNameHeader.setText(name);
+                        
+                        if (flatNumber != null) {
+                            startStatsListeners();
+                            startPendingPreviewListener();
                         }
                     }
                 }
 
-                Collections.reverse(pendingList);
-                Collections.reverse(historyList);
-
-                tvStatPending.setText(String.valueOf(pendingCount));
-                tvStatApproved.setText(String.valueOf(approvedCount));
-                tvStatRejected.setText(String.valueOf(rejectedCount));
-
-                if (pendingAdapter != null) pendingAdapter.notifyDataSetChanged();
-                if (historyAdapter != null) historyAdapter.notifyDataSetChanged();
-                
-                progressBar.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                progressBar.setVisibility(View.GONE);
-            }
-        });
+                @Override
+                public void onCancelled(@NonNull DatabaseError error) {
+                    Toast.makeText(OwnerDashboardActivity.this, "Error loading profile", Toast.LENGTH_SHORT).show();
+                }
+            });
     }
 
-    private void setupViewPager() {
-        ViewPagerAdapter adapter = new ViewPagerAdapter();
-        viewPager.setAdapter(adapter);
+    private void startStatsListeners() {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        Date startOfDay = cal.getTime();
 
-        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
-            tab.setText(position == 0 ? "PENDING" : "HISTORY");
-        }).attach();
-    }
-
-    @Override
-    public void onApprove(Visitor visitor) {
-        updateVisitorStatus(visitor.visitorId, "Approved");
-    }
-
-    @Override
-    public void onReject(Visitor visitor) {
-        updateVisitorStatus(visitor.visitorId, "Rejected");
-    }
-
-    private void updateVisitorStatus(String visitorId, String status) {
-        mDatabase.child("visitors").child(visitorId).child("status").setValue(status)
-                .addOnSuccessListener(aVoid -> {
-                    Snackbar.make(viewPager, "Visitor " + status, Snackbar.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Failed to update status", Toast.LENGTH_SHORT).show();
+        statsListener = db.collection("visitors")
+                .whereEqualTo("flatNumber", flatNumber)
+                .whereGreaterThanOrEqualTo("timestamp", startOfDay)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null || value == null) return;
+                    int visitors = 0, deliveries = 0;
+                    for (DocumentSnapshot doc : value.getDocuments()) {
+                        String purpose = doc.getString("purpose");
+                        if ("Visitor".equalsIgnoreCase(purpose)) visitors++;
+                        else if ("Delivery".equalsIgnoreCase(purpose)) deliveries++;
+                    }
+                    tvStatVisitorsToday.setText(String.valueOf(visitors));
+                    tvStatDeliveriesToday.setText(String.valueOf(deliveries));
                 });
     }
 
-    // Simple Adapter for ViewPager2 to hold the two lists
-    private class ViewPagerAdapter extends RecyclerView.Adapter<ViewPagerAdapter.ViewHolder> {
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            RecyclerView recyclerView = new RecyclerView(parent.getContext());
-            recyclerView.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            recyclerView.setLayoutManager(new LinearLayoutManager(parent.getContext()));
-            return new ViewHolder(recyclerView);
-        }
+    private void startPendingPreviewListener() {
+        pendingListener = db.collection("visitors")
+                .whereEqualTo("flatNumber", flatNumber)
+                .whereEqualTo("status", "Pending")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null || value == null) return;
+                    
+                    int count = value.size();
+                    tvStatPendingCount.setText(String.valueOf(count));
+                    
+                    if (count > 0) {
+                        cardPendingStats.setCardBackgroundColor(ContextCompat.getColor(this, R.color.amber_pending));
+                        BadgeDrawable badge = bottomNav.getOrCreateBadge(R.id.nav_requests);
+                        badge.setNumber(count);
+                        badge.setVisible(true);
+                    } else {
+                        cardPendingStats.setCardBackgroundColor(ContextCompat.getColor(this, R.color.primary_light_green));
+                        bottomNav.removeBadge(R.id.nav_requests);
+                    }
 
-        @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            if (position == 0) {
-                pendingAdapter = new VisitorAdapter(pendingList, true, OwnerDashboardActivity.this);
-                holder.recyclerView.setAdapter(pendingAdapter);
-            } else {
-                historyAdapter = new VisitorAdapter(historyList, false, OwnerDashboardActivity.this);
-                holder.recyclerView.setAdapter(historyAdapter);
+                    pendingPreviewList.clear();
+                    List<DocumentSnapshot> docs = value.getDocuments();
+                    for (int i = 0; i < Math.min(docs.size(), 3); i++) {
+                        pendingPreviewList.add(docs.get(i).toObject(Visitor.class));
+                    }
+                    adapter.notifyDataSetChanged();
+                });
+    }
+
+    private void setupBottomNav() {
+        bottomNav.setSelectedItemId(R.id.nav_dashboard);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_requests) {
+                startActivity(new Intent(this, ApprovalsActivity.class));
+            } else if (id == R.id.nav_history) {
+                startActivity(new Intent(this, VisitorHistoryActivity.class));
+            } else if (id == R.id.nav_profile) {
+                startActivity(new Intent(this, OwnerProfileActivity.class));
             }
-        }
+            return true;
+        });
 
-        @Override
-        public int getItemCount() { return 2; }
+        btnSeeAll.setOnClickListener(v -> startActivity(new Intent(this, ApprovalsActivity.class)));
+        btnLiveStatus.setOnClickListener(v -> startActivity(new Intent(this, LiveVisitorsActivity.class)));
+        btnHistory.setOnClickListener(v -> startActivity(new Intent(this, VisitorHistoryActivity.class)));
+        btnDeliveries.setOnClickListener(v -> startActivity(new Intent(this, DeliveryManagementActivity.class)));
+        btnContactGuard.setOnClickListener(v -> startActivity(new Intent(this, ContactGuardActivity.class)));
+    }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
-            RecyclerView recyclerView;
-            ViewHolder(View itemView) {
-                super(itemView);
-                recyclerView = (RecyclerView) itemView;
-            }
-        }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (statsListener != null) statsListener.remove();
+        if (pendingListener != null) pendingListener.remove();
     }
 }

@@ -1,130 +1,129 @@
 package com.example.securiodb;
 
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
-import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.securiodb.adapter.StatusAdapter;
-import com.example.securiodb.models.Visitor;
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-public class StatusListActivity extends AppCompatActivity {
+public class StatusListActivity extends AppCompatActivity implements StatusAdapter.OnExitClickListener {
 
-    private RecyclerView rvStatusList;
+    private RecyclerView rvEntries;
+    private ChipGroup chipGroupFilter;
+    private TextView tvEmpty;
     private StatusAdapter adapter;
-    private List<Visitor> allVisitorList = new ArrayList<>();
-    private List<Visitor> filteredList = new ArrayList<>();
+    private List<Map<String, Object>> allEntries = new ArrayList<>();
     
-    private LinearLayout layoutEmptyState;
-    private TextView tvEmptySubtext;
-    private String currentFilter = "All";
-
     private FirebaseFirestore db;
-    private FirebaseAuth mAuth;
+    private String guardUid;
+    private ListenerRegistration registration;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_status_list);
 
-        // Initialize Firebase
         db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
+        guardUid = FirebaseAuth.getInstance().getUid();
 
         initViews();
         setupRecyclerView();
-        setupChips();
-        listenForEntries();
+        setupRealtimeListener();
+        setupFilter();
     }
 
     private void initViews() {
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }
-        toolbar.setNavigationOnClickListener(v -> onBackPressed());
-
-        rvStatusList = findViewById(R.id.rvStatusList);
-        layoutEmptyState = findViewById(R.id.layoutEmptyState);
-        tvEmptySubtext = findViewById(R.id.tvEmptySubtext);
+        rvEntries = findViewById(R.id.rvEntries);
+        chipGroupFilter = findViewById(R.id.chipGroupFilter);
+        tvEmpty = findViewById(R.id.tvEmpty);
+        findViewById(R.id.toolbar).setOnClickListener(v -> finish());
     }
 
     private void setupRecyclerView() {
-        adapter = new StatusAdapter(this, filteredList);
-        rvStatusList.setLayoutManager(new LinearLayoutManager(this));
-        rvStatusList.setAdapter(adapter);
+        adapter = new StatusAdapter(new ArrayList<>(), this);
+        rvEntries.setLayoutManager(new LinearLayoutManager(this));
+        rvEntries.setAdapter(adapter);
     }
 
-    private void setupChips() {
-        Chip chipAll = findViewById(R.id.chipAll);
-        Chip chipPending = findViewById(R.id.chipPending);
-        Chip chipApproved = findViewById(R.id.chipApproved);
-        Chip chipRejected = findViewById(R.id.chipRejected);
-
-        chipAll.setOnClickListener(v -> { currentFilter = "All"; applyFilter("All"); });
-        chipPending.setOnClickListener(v -> { currentFilter = "Pending"; applyFilter("Pending"); });
-        chipApproved.setOnClickListener(v -> { currentFilter = "Approved"; applyFilter("Approved"); });
-        chipRejected.setOnClickListener(v -> { currentFilter = "Rejected"; applyFilter("Rejected"); });
-    }
-
-    private void listenForEntries() {
-        String guardUid = mAuth.getCurrentUser().getUid();
-
-        // Real-time listener for Firestore
-        db.collection("visitors")
+    private void setupRealtimeListener() {
+        registration = db.collection("visitors")
                 .whereEqualTo("createdBy", guardUid)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
-                .addSnapshotListener((snapshots, e) -> {
-                    if (e != null) {
-                        Log.e("StatusListActivity", "Listen failed.", e);
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        Toast.makeText(this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                         return;
                     }
 
-                    if (snapshots != null) {
-                        allVisitorList.clear();
-                        for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                            Visitor v = doc.toObject(Visitor.class);
-                            if (v != null) {
-                                allVisitorList.add(v);
+                    if (value != null) {
+                        allEntries.clear();
+                        for (DocumentSnapshot doc : value.getDocuments()) {
+                            Map<String, Object> data = doc.getData();
+                            if (data != null) {
+                                data.put("id", doc.getId());
+                                allEntries.add(data);
                             }
                         }
-                        applyFilter(currentFilter);
+                        applyFilter();
                     }
                 });
     }
 
-    private void applyFilter(String filter) {
-        filteredList.clear();
-        for (Visitor v : allVisitorList) {
-            if (filter.equals("All") || filter.equalsIgnoreCase(v.getStatus())) {
-                filteredList.add(v);
-            }
-        }
-        adapter.notifyDataSetChanged();
-        showEmptyState(filteredList.isEmpty(), filter);
+    private void setupFilter() {
+        chipGroupFilter.setOnCheckedStateChangeListener((group, checkedIds) -> applyFilter());
     }
 
-    private void showEmptyState(boolean isEmpty, String filter) {
-        if (isEmpty) {
-            layoutEmptyState.setVisibility(View.VISIBLE);
-            tvEmptySubtext.setText("There are no " + filter.toLowerCase() + " entries found.");
+    private void applyFilter() {
+        int checkedId = chipGroupFilter.getCheckedChipId();
+        List<Map<String, Object>> filteredList = new ArrayList<>();
+
+        String filterStatus = "";
+        if (checkedId == R.id.chipPending) filterStatus = "Pending";
+        else if (checkedId == R.id.chipApproved) filterStatus = "Approved";
+        else if (checkedId == R.id.chipRejected) filterStatus = "Rejected";
+
+        if (filterStatus.isEmpty()) {
+            filteredList.addAll(allEntries);
         } else {
-            layoutEmptyState.setVisibility(View.GONE);
+            for (Map<String, Object> entry : allEntries) {
+                if (filterStatus.equalsIgnoreCase((String) entry.get("status"))) {
+                    filteredList.add(entry);
+                }
+            }
         }
+
+        adapter.updateList(filteredList);
+        tvEmpty.setVisibility(filteredList.isEmpty() ? View.VISIBLE : View.GONE);
+    }
+
+    @Override
+    public void onExitClick(String docId) {
+        db.collection("visitors").document(docId)
+                .update("exitTime", FieldValue.serverTimestamp())
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Exit marked", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to mark exit", Toast.LENGTH_SHORT).show());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (registration != null) registration.remove();
     }
 }

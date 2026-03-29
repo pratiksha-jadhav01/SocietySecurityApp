@@ -1,22 +1,17 @@
 package com.example.securiodb;
 
-import android.content.ContentValues;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.MediaStore;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -24,20 +19,21 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
-import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
 public class AdminDashboardActivity extends AppCompatActivity {
 
-    private TextView tvStatTotalUsers, tvStatVisitorsToday, tvStatPending, tvStatRejectedToday;
-    private MaterialCardView cardManageUsers, cardAllLogs, cardExportLogs;
+    private TextView tvVisitorsToday, tvDeliveriesToday, tvActiveInside, tvPendingApprovals;
+    private MaterialCardView cardManageUsers, cardVisitorLogs, cardDeliveryLogs, cardApprovals, cardReports;
+    private MaterialCardView cardStatVisitors, cardStatDeliveries, cardStatActive, cardStatPending;
     private ImageView ivLogout;
     private ProgressBar progressBar;
+    private BottomNavigationView bottomNav;
 
-    private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
+    private FirebaseAuth mAuth;
     private ValueEventListener statsListener;
 
     @Override
@@ -45,198 +41,135 @@ public class AdminDashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_dashboard);
 
+        // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
 
-        // 1. Security Check: Authentication
+        // Security check
         if (mAuth.getCurrentUser() == null) {
-            navigateToLogin();
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
             return;
         }
 
         initViews();
-        
-        // 2. Security Check: Role Verification
-        verifyAdminRole();
-
-        // 3. Setup Stats and Listeners
-        setupStatsRealtime();
-        setupClickListeners();
-    }
-
-    private void initViews() {
-        tvStatTotalUsers = findViewById(R.id.tvStatTotalUsers);
-        tvStatVisitorsToday = findViewById(R.id.tvStatVisitorsToday);
-        tvStatPending = findViewById(R.id.tvStatPending);
-        tvStatRejectedToday = findViewById(R.id.tvStatRejectedToday);
-        
-        cardManageUsers = findViewById(R.id.cardManageUsers);
-        cardAllLogs = findViewById(R.id.cardAllLogs);
-        cardExportLogs = findViewById(R.id.cardExportLogs);
-        
-        ivLogout = findViewById(R.id.ivLogout);
-        progressBar = findViewById(R.id.progressBar);
-    }
-
-    private void verifyAdminRole() {
-        String uid = mAuth.getCurrentUser().getUid();
-        mDatabase.child("users").child(uid).child("role").addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                String role = snapshot.getValue(String.class);
-                if (!"admin".equals(role)) {
-                    Toast.makeText(AdminDashboardActivity.this, "Access Denied", Toast.LENGTH_SHORT).show();
-                    mAuth.signOut();
-                    navigateToLogin();
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                navigateToLogin();
-            }
-        });
-    }
-
-    private void setupStatsRealtime() {
-        progressBar.setVisibility(View.VISIBLE);
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
-        statsListener = new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                // Count Users
-                long totalUsers = snapshot.child("users").getChildrenCount();
-                tvStatTotalUsers.setText(String.valueOf(totalUsers));
-
-                // Count Visitors
-                int visitorsToday = 0;
-                int pending = 0;
-                int rejectedToday = 0;
-
-                for (DataSnapshot vDoc : snapshot.child("visitors").getChildren()) {
-                    Long timestamp = vDoc.child("timestamp").getValue(Long.class);
-                    String status = vDoc.child("status").getValue(String.class);
-                    
-                    if (timestamp != null) {
-                        String entryDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(timestamp));
-                        
-                        if (today.equals(entryDate)) {
-                            visitorsToday++;
-                            if ("Rejected".equalsIgnoreCase(status)) rejectedToday++;
-                        }
-                    }
-                    
-                    if ("Pending".equalsIgnoreCase(status)) {
-                        pending++;
-                    }
-                }
-
-                tvStatVisitorsToday.setText(String.valueOf(visitorsToday));
-                tvStatPending.setText(String.valueOf(pending));
-                tvStatRejectedToday.setText(String.valueOf(rejectedToday));
-                
-                progressBar.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                progressBar.setVisibility(View.GONE);
-            }
-        };
-
-        mDatabase.addValueEventListener(statsListener);
-    }
-
-    private void setupClickListeners() {
-        cardManageUsers.setOnClickListener(v -> {
-            Toast.makeText(this, "Opening User Management...", Toast.LENGTH_SHORT).show();
-            // startActivity(new Intent(this, UserManagementActivity.class));
-        });
-
-        cardAllLogs.setOnClickListener(v -> {
-            Toast.makeText(this, "Opening All Logs...", Toast.LENGTH_SHORT).show();
-            // startActivity(new Intent(this, AllLogsActivity.class));
-        });
-
-        cardExportLogs.setOnClickListener(v -> exportLogsToCSV());
+        setupBottomNav();
+        setupStatsListeners();
+        setupQuickActions();
 
         ivLogout.setOnClickListener(v -> {
             mAuth.signOut();
-            navigateToLogin();
+            Intent intent = new Intent(this, LoginActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
         });
     }
 
-    private void exportLogsToCSV() {
-        progressBar.setVisibility(View.VISIBLE);
-        mDatabase.child("visitors").addListenerForSingleValueEvent(new ValueEventListener() {
+    private void initViews() {
+        tvVisitorsToday = findViewById(R.id.tvStatVisitorsToday);
+        tvDeliveriesToday = findViewById(R.id.tvStatDeliveries);
+        tvActiveInside = findViewById(R.id.tvStatActive);
+        tvPendingApprovals = findViewById(R.id.tvStatPending);
+
+        cardManageUsers = findViewById(R.id.cardManageUsers);
+        cardVisitorLogs = findViewById(R.id.cardVisitorLogs);
+        cardDeliveryLogs = findViewById(R.id.cardDeliveryLogs);
+        cardApprovals = findViewById(R.id.cardApprovals);
+        cardReports = findViewById(R.id.cardReports);
+
+        cardStatVisitors = findViewById(R.id.cardStatVisitors);
+        cardStatDeliveries = findViewById(R.id.cardStatDeliveries);
+        cardStatActive = findViewById(R.id.cardStatActive);
+        cardStatPending = findViewById(R.id.cardStatPending);
+
+        ivLogout = findViewById(R.id.ivLogout);
+        progressBar = findViewById(R.id.progressBar);
+        bottomNav = findViewById(R.id.adminBottomNav);
+    }
+
+    private void setupBottomNav() {
+        bottomNav.setSelectedItemId(R.id.nav_dashboard);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_visitors) {
+                startActivity(new Intent(this, VisitorLogsActivity.class));
+                return true;
+            } else if (id == R.id.nav_users) {
+                startActivity(new Intent(this, ManageUsersActivity.class));
+                return true;
+            } else if (id == R.id.nav_profile) {
+                startActivity(new Intent(this, AdminProfileActivity.class));
+                return true;
+            }
+            return true;
+        });
+    }
+
+    private void setupStatsListeners() {
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+        statsListener = mDatabase.child("visitors").addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                StringBuilder csvData = new StringBuilder();
-                csvData.append("Name,Phone,Flat,Purpose,Status,Time\n");
+                int visitorsToday = 0;
+                int deliveriesToday = 0;
+                int activeInside = 0;
+                int pendingApprovals = 0;
 
-                for (DataSnapshot vDoc : snapshot.getChildren()) {
-                    csvData.append(vDoc.child("name").getValue()).append(",")
-                           .append(vDoc.child("phone").getValue()).append(",")
-                           .append(vDoc.child("flatNumber").getValue()).append(",")
-                           .append(vDoc.child("purpose").getValue()).append(",")
-                           .append(vDoc.child("status").getValue()).append(",")
-                           .append(new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
-                                   .format(new Date(vDoc.child("timestamp").getValue(Long.class))))
-                           .append("\n");
+                for (DataSnapshot ds : snapshot.getChildren()) {
+                    Long timestamp = ds.child("timestamp").getValue(Long.class);
+                    String purpose = ds.child("purpose").getValue(String.class);
+                    String status = ds.child("status").getValue(String.class);
+                    Object exitTime = ds.child("exitTime").getValue();
+
+                    if (timestamp != null) {
+                        String entryDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(timestamp));
+                        if (today.equals(entryDate)) {
+                            if ("Visitor".equalsIgnoreCase(purpose)) visitorsToday++;
+                            else if ("Delivery".equalsIgnoreCase(purpose)) deliveriesToday++;
+                        }
+                    }
+
+                    if ("Approved".equalsIgnoreCase(status) && exitTime == null) {
+                        activeInside++;
+                    }
+
+                    if ("Pending".equalsIgnoreCase(status)) {
+                        pendingApprovals++;
+                    }
                 }
 
-                saveCSVFile(csvData.toString());
+                if (tvVisitorsToday != null) tvVisitorsToday.setText(String.valueOf(visitorsToday));
+                if (tvDeliveriesToday != null) tvDeliveriesToday.setText(String.valueOf(deliveriesToday));
+                if (tvActiveInside != null) tvActiveInside.setText(String.valueOf(activeInside));
+                if (tvPendingApprovals != null) tvPendingApprovals.setText(String.valueOf(pendingApprovals));
             }
 
             @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                progressBar.setVisibility(View.GONE);
-            }
+            public void onCancelled(@NonNull DatabaseError error) {}
         });
     }
 
-    private void saveCSVFile(String data) {
-        String fileName = "VisitorLogs_" + System.currentTimeMillis() + ".csv";
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
-        values.put(MediaStore.MediaColumns.MIME_TYPE, "text/csv");
-        values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+    private void setupQuickActions() {
+        if (cardManageUsers != null) cardManageUsers.setOnClickListener(v -> startActivity(new Intent(this, ManageUsersActivity.class)));
+        if (cardVisitorLogs != null) cardVisitorLogs.setOnClickListener(v -> startActivity(new Intent(this, VisitorLogsActivity.class)));
+        if (cardDeliveryLogs != null) cardDeliveryLogs.setOnClickListener(v -> startActivity(new Intent(this, DeliveryLogsActivity.class)));
+        if (cardApprovals != null) cardApprovals.setOnClickListener(v -> startActivity(new Intent(this, ApprovalsActivity.class)));
+        if (cardReports != null) cardReports.setOnClickListener(v -> startActivity(new Intent(this, ReportsActivity.class)));
 
-        Uri uri = getContentResolver().insert(MediaStore.Files.getContentUri("external"), values);
-
-        try {
-            if (uri != null) {
-                OutputStream outputStream = getContentResolver().openOutputStream(uri);
-                outputStream.write(data.getBytes());
-                outputStream.close();
-                progressBar.setVisibility(View.GONE);
-                Snackbar.make(cardExportLogs, "Logs exported to Downloads", Snackbar.LENGTH_LONG)
-                        .setAction("Open", view -> {
-                            Intent intent = new Intent(Intent.ACTION_VIEW);
-                            intent.setDataAndType(uri, "text/csv");
-                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                            startActivity(intent);
-                        }).show();
-            }
-        } catch (Exception e) {
-            progressBar.setVisibility(View.GONE);
-            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void navigateToLogin() {
-        Intent intent = new Intent(this, LoginActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(intent);
-        finish();
+        // Stat cards click listeners
+        if (cardStatVisitors != null) cardStatVisitors.setOnClickListener(v -> startActivity(new Intent(this, VisitorLogsActivity.class)));
+        if (cardStatDeliveries != null) cardStatDeliveries.setOnClickListener(v -> startActivity(new Intent(this, DeliveryLogsActivity.class)));
+        if (cardStatActive != null) cardStatActive.setOnClickListener(v -> startActivity(new Intent(this, VisitorLogsActivity.class)));
+        if (cardStatPending != null) cardStatPending.setOnClickListener(v -> startActivity(new Intent(this, ApprovalsActivity.class)));
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (mDatabase != null && statsListener != null) {
-            mDatabase.removeEventListener(statsListener);
+            mDatabase.child("visitors").removeEventListener(statsListener);
         }
     }
 }

@@ -1,17 +1,22 @@
 package com.example.securiodb;
 
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -29,6 +34,11 @@ public class LoginActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
 
+    private MaterialCardView cardGuard, cardOwner, cardAdmin;
+    private ImageView ivGuard, ivOwner, ivAdmin;
+    private TextView tvGuard, tvOwner, tvAdmin;
+    private String selectedRole = "guard"; // Default role
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,17 +47,70 @@ public class LoginActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
 
+        // Bind Views
         etEmail = findViewById(R.id.etEmail);
         etPassword = findViewById(R.id.etPassword);
         btnLogin = findViewById(R.id.btnLogin);
         tvRegister = findViewById(R.id.tvRegister);
         progressBar = findViewById(R.id.progressBar);
 
-        btnLogin.setOnClickListener(v -> loginUser(null));
+        cardGuard = findViewById(R.id.cardRoleGuard);
+        cardOwner = findViewById(R.id.cardRoleOwner);
+        cardAdmin = findViewById(R.id.cardRoleAdmin);
+
+        ivGuard = findViewById(R.id.ivGuard);
+        ivOwner = findViewById(R.id.ivOwner);
+        ivAdmin = findViewById(R.id.ivAdmin);
+
+        tvGuard = findViewById(R.id.tvGuard);
+        tvOwner = findViewById(R.id.tvOwner);
+        tvAdmin = findViewById(R.id.tvAdmin);
+
+        // Role selection listeners
+        cardGuard.setOnClickListener(v -> selectRole("guard"));
+        cardOwner.setOnClickListener(v -> selectRole("owner"));
+        cardAdmin.setOnClickListener(v -> selectRole("admin"));
+
+        // Initialize default selection
+        selectRole("guard");
+
+        btnLogin.setOnClickListener(v -> loginUser(selectedRole));
 
         tvRegister.setOnClickListener(v -> {
             startActivity(new Intent(LoginActivity.this, RegisterActivity.class));
         });
+    }
+
+    private void selectRole(String role) {
+        selectedRole = role;
+
+        // Reset all to unselected
+        resetRoleUI(cardGuard, ivGuard, tvGuard);
+        resetRoleUI(cardOwner, ivOwner, tvOwner);
+        resetRoleUI(cardAdmin, ivAdmin, tvAdmin);
+
+        // Apply selected style
+        if ("guard".equals(role)) {
+            setSelectedUI(cardGuard, ivGuard, tvGuard);
+        } else if ("owner".equals(role)) {
+            setSelectedUI(cardOwner, ivOwner, tvOwner);
+        } else if ("admin".equals(role)) {
+            setSelectedUI(cardAdmin, ivAdmin, tvAdmin);
+        }
+    }
+
+    private void resetRoleUI(MaterialCardView card, ImageView iv, TextView tv) {
+        card.setCardBackgroundColor(Color.WHITE);
+        card.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#1565C0")));
+        iv.setImageTintList(ColorStateList.valueOf(Color.parseColor("#1565C0")));
+        tv.setTextColor(Color.parseColor("#1565C0"));
+    }
+
+    private void setSelectedUI(MaterialCardView card, ImageView iv, TextView tv) {
+        card.setCardBackgroundColor(ColorStateList.valueOf(Color.parseColor("#1565C0")));
+        card.setStrokeColor(ColorStateList.valueOf(Color.TRANSPARENT));
+        iv.setImageTintList(ColorStateList.valueOf(Color.WHITE));
+        tv.setTextColor(Color.WHITE);
     }
 
     private void loginUser(String expectedRole) {
@@ -84,7 +147,7 @@ public class LoginActivity extends AppCompatActivity {
                 if (snapshot.exists()) {
                     String role = snapshot.child("role").getValue(String.class);
                     
-                    if (expectedRole != null && !expectedRole.equals(role)) {
+                    if (expectedRole != null && !expectedRole.equalsIgnoreCase(role)) {
                         Toast.makeText(LoginActivity.this, "Unauthorized access for " + expectedRole, Toast.LENGTH_SHORT).show();
                         mAuth.signOut();
                         return;
@@ -107,9 +170,9 @@ public class LoginActivity extends AppCompatActivity {
 
     private void navigateToDashboard(String role) {
         Intent intent;
-        if ("admin".equals(role)) {
+        if ("admin".equalsIgnoreCase(role)) {
             intent = new Intent(this, AdminDashboardActivity.class);
-        } else if ("guard".equals(role)) {
+        } else if ("guard".equalsIgnoreCase(role)) {
             intent = new Intent(this, GuardDashboardActivity.class);
         } else {
             intent = new Intent(this, OwnerDashboardActivity.class);

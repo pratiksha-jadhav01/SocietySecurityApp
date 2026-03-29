@@ -4,39 +4,37 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F5F5"
+    android:background="#F5F7FA"
     tools:context=".StatusListActivity">
 
     <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+        android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layout_constraintTop_toTopOf="parent">
-
-        <com.google.android.material.appbar.MaterialToolbar
+        <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/white"
-            app:navigationIcon="?attr/homeAsUpIndicator"
-            app:title="Entry Status"
-            app:titleTextColor="@color/black" />
+            android:background="#1565C0"
+            app:title="My Entries"
+            app:titleTextColor="@color/white"
+            app:navigationIcon="@android:drawable/ic_menu_revert" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <HorizontalScrollView
-        android:id="@+id/filterScrollView"
+        android:id="@+id/chipsScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
         android:scrollbars="none"
-        app:layout_constraintTop_toBottomOf="@id/appBarLayout">
-
+        app:layout_constraintTop_toBottomOf="@id/appBar">
         <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupFilters"
+            android:id="@+id/chipGroupFilter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:singleSelection="true">
-
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipAll"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
@@ -44,78 +42,44 @@
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:text="All" />
-
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipPending"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Pending"
-                app:chipBackgroundColor="@color/browser_actions_title_color"
-                app:chipSurfaceColor="#FAEEDA" />
-
+                android:text="Pending" />
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipApproved"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Approved"
-                app:chipSurfaceColor="#EAF3DE" />
-
+                android:text="Approved" />
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipRejected"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Rejected"
-                app:chipSurfaceColor="#FCEBEB" />
+                android:text="Rejected" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvStatusList"
+        android:id="@+id/rvEntries"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/filterScrollView" />
+        app:layout_constraintTop_toBottomOf="@id/chipsScroll"
+        tools:listitem="@layout/item_status_visitor" />
 
-    <LinearLayout
-        android:id="@+id/layoutEmptyState"
+    <TextView
+        android:id="@+id/tvEmpty"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical"
+        android:text="No entries found"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/filterScrollView">
-
-        <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@android:drawable/ic_dialog_info"
-            app:tint="#999999" />
-
-        <TextView
-            android:id="@+id/tvEmptyTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="No entries found"
-            android:textColor="#333333"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvEmptySubtext"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="There are no entries in this category."
-            android:textColor="#666666" />
-    </LinearLayout>
+        app:layout_constraintTop_toBottomOf="@id/chipsScroll" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

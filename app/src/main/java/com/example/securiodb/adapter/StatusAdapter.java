@@ -1,12 +1,9 @@
 package com.example.securiodb.adapter;
 
-import android.content.Context;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -14,98 +11,115 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.securiodb.R;
-import com.example.securiodb.models.Visitor;
-import com.google.android.material.chip.Chip;
+import com.google.android.material.imageview.ShapeableImageView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.StatusViewHolder> {
+public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.ViewHolder> {
 
-    private Context context;
-    private List<Visitor> visitorList;
-    private SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM, hh:mm a", Locale.getDefault());
+    private List<Map<String, Object>> entries;
+    private OnExitClickListener exitClickListener;
 
-    public StatusAdapter(Context context, List<Visitor> visitorList) {
-        this.context = context;
-        this.visitorList = visitorList;
+    public interface OnExitClickListener {
+        void onExitClick(String docId);
+    }
+
+    public StatusAdapter(List<Map<String, Object>> entries, OnExitClickListener listener) {
+        this.entries = entries;
+        this.exitClickListener = listener;
+    }
+
+    public void updateList(List<Map<String, Object>> newList) {
+        this.entries = newList;
+        notifyDataSetChanged();
     }
 
     @NonNull
     @Override
-    public StatusViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(context).inflate(R.layout.item_status_visitor, parent, false);
-        return new StatusViewHolder(view);
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_status_visitor, parent, false);
+        return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull StatusViewHolder holder, int position) {
-        Visitor visitor = visitorList.get(position);
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        Map<String, Object> entry = entries.get(position);
+        String docId = (String) entry.get("id");
+        String name = (String) entry.get("name");
+        String flat = (String) entry.get("flatNumber");
+        String purpose = (String) entry.get("purpose");
+        String status = (String) entry.get("status");
+        String photoUrl = (String) entry.get("photoUrl");
+        Object timestamp = entry.get("timestamp");
+        Object exitTime = entry.get("exitTime");
 
-        // Set basic info
-        holder.tvName.setText(visitor.getName());
-        holder.tvFlat.setText("Flat: " + visitor.getFlatNumber());
-        holder.chipPurpose.setText(visitor.getPurpose());
+        holder.tvName.setText(name);
+        holder.tvFlat.setText("Flat: " + flat);
+        holder.tvPurpose.setText("Purpose: " + purpose);
+        
+        if (timestamp instanceof com.google.firebase.Timestamp) {
+            Date date = ((com.google.firebase.Timestamp) timestamp).toDate();
+            SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+            holder.tvTime.setText("Entry: " + sdf.format(date));
+        }
 
-        // Load photo with Glide
-        Glide.with(context)
-                .load(visitor.getPhotoUrl())
-                .placeholder(android.R.drawable.ic_menu_report_image)
+        holder.tvStatus.setText(status != null ? status.toUpperCase() : "PENDING");
+        
+        // Color coding
+        if ("Approved".equalsIgnoreCase(status)) {
+            holder.tvStatus.setBackgroundResource(R.drawable.bg_status_approved);
+            if (exitTime == null) {
+                holder.btnExit.setVisibility(View.VISIBLE);
+            } else {
+                holder.btnExit.setVisibility(View.GONE);
+                if (exitTime instanceof com.google.firebase.Timestamp) {
+                    Date date = ((com.google.firebase.Timestamp) exitTime).toDate();
+                    SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+                    holder.tvTime.append(" | Exit: " + sdf.format(date));
+                }
+            }
+        } else if ("Rejected".equalsIgnoreCase(status)) {
+            holder.tvStatus.setBackgroundResource(R.drawable.bg_status_rejected);
+            holder.btnExit.setVisibility(View.GONE);
+        } else {
+            holder.tvStatus.setBackgroundResource(R.drawable.bg_status_pending);
+            holder.btnExit.setVisibility(View.GONE);
+        }
+
+        Glide.with(holder.itemView.getContext())
+                .load(photoUrl)
+                .placeholder(android.R.drawable.ic_menu_camera)
                 .into(holder.ivPhoto);
 
-        // Status badge logic
-        String status = visitor.getStatus() != null ? visitor.getStatus() : "Pending";
-        holder.tvStatus.setText(status.toUpperCase());
-        
-        GradientDrawable shape = new GradientDrawable();
-        shape.setCornerRadius(8f);
-
-        if ("Pending".equalsIgnoreCase(status)) {
-            shape.setColor(Color.parseColor("#FAEEDA"));
-            holder.tvStatus.setTextColor(Color.parseColor("#854F0B"));
-        } else if ("Approved".equalsIgnoreCase(status)) {
-            shape.setColor(Color.parseColor("#EAF3DE"));
-            holder.tvStatus.setTextColor(Color.parseColor("#27500A"));
-        } else if ("Rejected".equalsIgnoreCase(status)) {
-            shape.setColor(Color.parseColor("#FCEBEB"));
-            holder.tvStatus.setTextColor(Color.parseColor("#A32D2D"));
-        }
-        holder.tvStatus.setBackground(shape);
-
-        // Format timestamps
-        if (visitor.getEntryTime() != null) {
-            holder.tvEntryTime.setText(dateFormat.format(visitor.getEntryTime().toDate()));
-        } else {
-            holder.tvEntryTime.setText("N/A");
-        }
-
-        if (visitor.getExitTime() != null) {
-            holder.tvExitTime.setText(dateFormat.format(visitor.getExitTime().toDate()));
-        } else {
-            holder.tvExitTime.setText("Not exited yet");
-        }
+        holder.btnExit.setOnClickListener(v -> {
+            if (exitClickListener != null) exitClickListener.onExitClick(docId);
+        });
     }
 
     @Override
     public int getItemCount() {
-        return visitorList.size();
+        return entries.size();
     }
 
-    static class StatusViewHolder extends RecyclerView.ViewHolder {
-        ImageView ivPhoto;
-        TextView tvName, tvFlat, tvStatus, tvEntryTime, tvExitTime;
-        Chip chipPurpose;
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        ShapeableImageView ivPhoto;
+        TextView tvName, tvFlat, tvPurpose, tvTime, tvStatus;
+        Button btnExit;
 
-        public StatusViewHolder(@NonNull View itemView) {
+        public ViewHolder(@NonNull View itemView) {
             super(itemView);
             ivPhoto = itemView.findViewById(R.id.ivVisitorPhoto);
             tvName = itemView.findViewById(R.id.tvVisitorName);
             tvFlat = itemView.findViewById(R.id.tvFlatNumber);
+            tvPurpose = itemView.findViewById(R.id.tvPurpose);
+            tvTime = itemView.findViewById(R.id.tvTimeInfo);
             tvStatus = itemView.findViewById(R.id.tvStatusBadge);
-            tvEntryTime = itemView.findViewById(R.id.tvEntryTime);
-            tvExitTime = itemView.findViewById(R.id.tvExitTime);
-            chipPurpose = itemView.findViewById(R.id.chipPurpose);
+            btnExit = itemView.findViewById(R.id.btnMarkExit);
         }
     }
 }

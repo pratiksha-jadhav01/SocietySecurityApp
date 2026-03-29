@@ -2,42 +2,36 @@ package com.example.securiodb;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
+import android.util.Log;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
 public class GuardDashboardActivity extends AppCompatActivity {
 
-    // UI Elements
-    private TextView tvGuardName, tvTotalCount, tvPendingCount, tvApprovedCount;
-    private MaterialCardView cardAddVisitor, cardAddDelivery, cardViewStatus, cardMarkExit;
-    private ImageView ivLogoutHeader;
-    private Button btnFooterLogout;
-    private ProgressBar progressBar;
+    private TextView tvWelcome, tvVisitorsToday, tvDeliveriesToday, tvInside;
+    private MaterialCardView cardAddVisitor, cardAddDelivery, cardMarkExit, cardLiveStatus, cardMyEntries;
+    private BottomNavigationView bottomNav;
 
-    // Firebase
+    private FirebaseFirestore db;
     private FirebaseAuth mAuth;
-    private DatabaseReference mDatabase;
-    private ValueEventListener statsListener;
+    private String guardUid;
+    private ListenerRegistration visitorsListener, deliveriesListener, insideListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,159 +39,137 @@ public class GuardDashboardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_guard_dashboard);
 
         // Initialize Firebase
+        db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
-        mDatabase = FirebaseDatabase.getInstance().getReference();
-
-        // Check Authentication
-        FirebaseUser currentUser = mAuth.getCurrentUser();
-        if (currentUser == null) {
+        if (mAuth.getCurrentUser() == null) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
+        guardUid = mAuth.getCurrentUser().getUid();
 
-        // Initialize Views
         initViews();
-
-        // Fetch Guard Profile
-        fetchGuardProfile(currentUser.getUid());
-
-        // Setup Real-time Stats
-        setupRealtimeStats(currentUser.getUid());
-
-        // Setup Click Listeners
+        fetchGuardName();
+        setupStatsListeners();
         setupClickListeners();
+        setupBottomNav();
+        updateFcmToken();
     }
 
     private void initViews() {
-        tvGuardName = findViewById(R.id.tvGuardName);
-        tvTotalCount = findViewById(R.id.tvTotalCount);
-        tvPendingCount = findViewById(R.id.tvPendingCount);
-        tvApprovedCount = findViewById(R.id.tvApprovedCount);
-        
+        tvWelcome = findViewById(R.id.tvGuardWelcome);
+        tvVisitorsToday = findViewById(R.id.tvStatVisitors);
+        tvDeliveriesToday = findViewById(R.id.tvStatDeliveries);
+        tvInside = findViewById(R.id.tvStatInside);
+
         cardAddVisitor = findViewById(R.id.cardAddVisitor);
         cardAddDelivery = findViewById(R.id.cardAddDelivery);
-        cardViewStatus = findViewById(R.id.cardViewStatus);
         cardMarkExit = findViewById(R.id.cardMarkExit);
-        
-        ivLogoutHeader = findViewById(R.id.ivLogoutHeader);
-        btnFooterLogout = findViewById(R.id.btnFooterLogout);
-        progressBar = findViewById(R.id.progressBar);
+        cardLiveStatus = findViewById(R.id.cardLiveStatus);
+        cardMyEntries = findViewById(R.id.cardMyEntries);
+
+        bottomNav = findViewById(R.id.bottomNav);
     }
 
-    private void fetchGuardProfile(String uid) {
-        // Fetching name from Realtime Database (since we migrated from Firestore)
-        mDatabase.child("users").child(uid).child("name").addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                if (snapshot.exists()) {
-                    String name = snapshot.getValue(String.class);
-                    tvGuardName.setText("Welcome, " + name);
-                }
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                // Silently fail or log
+    private void fetchGuardName() {
+        db.collection("users").document(guardUid).get().addOnSuccessListener(documentSnapshot -> {
+            if (documentSnapshot.exists()) {
+                String name = documentSnapshot.getString("name");
+                tvWelcome.setText("Hey, " + (name != null ? name : "Guard") + " 👋");
             }
         });
     }
 
-    private void setupRealtimeStats(String guardId) {
-        progressBar.setVisibility(View.VISIBLE);
-        
-        // Get current date string for filtering
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+    private void setupStatsListeners() {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        Date startOfDay = calendar.getTime();
 
-        // Listening to "visitors" node
-        statsListener = mDatabase.child("visitors").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                int total = 0;
-                int pending = 0;
-                int approved = 0;
+        // Visitors Today Listener
+        visitorsListener = db.collection("visitors")
+                .whereEqualTo("createdBy", guardUid)
+                .whereEqualTo("purpose", "Visitor")
+                .whereGreaterThanOrEqualTo("timestamp", startOfDay)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) return;
+                    if (value != null) tvVisitorsToday.setText(String.valueOf(value.size()));
+                });
 
-                for (DataSnapshot postSnapshot : snapshot.getChildren()) {
-                    // Filter by Guard ID and Today's Date
-                    String createdBy = postSnapshot.child("createdBy").getValue(String.class);
-                    Long timestamp = postSnapshot.child("timestamp").getValue(Long.class);
-                    String status = postSnapshot.child("status").getValue(String.class);
+        // Deliveries Today Listener
+        deliveriesListener = db.collection("visitors")
+                .whereEqualTo("createdBy", guardUid)
+                .whereEqualTo("purpose", "Delivery")
+                .whereGreaterThanOrEqualTo("timestamp", startOfDay)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) return;
+                    if (value != null) tvDeliveriesToday.setText(String.valueOf(value.size()));
+                });
 
-                    if (timestamp != null && guardId.equals(createdBy)) {
-                        String entryDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                                .format(new Date(timestamp));
-
-                        if (today.equals(entryDate)) {
-                            total++;
-                            if ("Pending".equalsIgnoreCase(status)) pending++;
-                            else if ("Approved".equalsIgnoreCase(status)) approved++;
-                        }
+        // Currently Inside Listener (Active Inside)
+        insideListener = db.collection("visitors")
+                .whereEqualTo("createdBy", guardUid)
+                .whereEqualTo("status", "Approved")
+                .whereEqualTo("exitTime", null)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        Log.e("Firestore", "Error fetching inside stats", error);
+                        return;
                     }
-                }
-
-                // Update UI
-                tvTotalCount.setText(String.valueOf(total));
-                tvPendingCount.setText(String.valueOf(pending));
-                tvApprovedCount.setText(String.valueOf(approved));
-                progressBar.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                progressBar.setVisibility(View.GONE);
-                Toast.makeText(GuardDashboardActivity.this, "Error loading stats", Toast.LENGTH_SHORT).show();
-            }
-        });
+                    if (value != null) tvInside.setText(String.valueOf(value.size()));
+                });
     }
 
     private void setupClickListeners() {
-        // Add Visitor
         cardAddVisitor.setOnClickListener(v -> {
             Intent intent = new Intent(this, VisitorEntryActivity.class);
-            intent.putExtra("type", "Visitor");
+            intent.putExtra("purpose", "Visitor");
             startActivity(intent);
         });
 
-        // Add Delivery
         cardAddDelivery.setOnClickListener(v -> {
-            Intent intent = new Intent(this, VisitorEntryActivity.class);
-            intent.putExtra("type", "Delivery");
+            Intent intent = new Intent(this, AddDeliveryActivity.class);
             startActivity(intent);
         });
 
-        // View Status (Reusable Admin View or dedicated StatusListActivity)
-        cardViewStatus.setOnClickListener(v -> {
-            // Note: If StatusListActivity doesn't exist yet, you can use AdminDashboardActivity 
-            // but filtered for guard's own entries.
-            Toast.makeText(this, "Opening Status List...", Toast.LENGTH_SHORT).show();
-            // startActivity(new Intent(this, StatusListActivity.class));
+        cardMarkExit.setOnClickListener(v -> startActivity(new Intent(this, MarkExitActivity.class)));
+        cardLiveStatus.setOnClickListener(v -> startActivity(new Intent(this, LiveStatusActivity.class)));
+        cardMyEntries.setOnClickListener(v -> startActivity(new Intent(this, StatusListActivity.class)));
+    }
+
+    private void setupBottomNav() {
+        bottomNav.setSelectedItemId(R.id.nav_dashboard);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_add_entry) {
+                startActivity(new Intent(this, VisitorEntryActivity.class));
+                return true;
+            } else if (id == R.id.nav_visitors) {
+                startActivity(new Intent(this, StatusListActivity.class));
+                return true;
+            } else if (id == R.id.nav_profile) {
+                startActivity(new Intent(this, GuardProfileActivity.class));
+                return true;
+            }
+            return true;
         });
+    }
 
-        // Mark Exit
-        cardMarkExit.setOnClickListener(v -> {
-            Toast.makeText(this, "Opening Mark Exit...", Toast.LENGTH_SHORT).show();
-            // startActivity(new Intent(this, MarkExitActivity.class));
+    private void updateFcmToken() {
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                String token = task.getResult();
+                db.collection("users").document(guardUid).update("fcmToken", token);
+            }
         });
-
-        // Logout Actions
-        View.OnClickListener logoutListener = v -> {
-            mAuth.signOut();
-            Intent intent = new Intent(this, LoginActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
-        };
-
-        ivLogoutHeader.setOnClickListener(logoutListener);
-        btnFooterLogout.setOnClickListener(logoutListener);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Remove listener to prevent memory leaks
-        if (mDatabase != null && statsListener != null) {
-            mDatabase.child("visitors").removeEventListener(statsListener);
-        }
+        if (visitorsListener != null) visitorsListener.remove();
+        if (deliveriesListener != null) deliveriesListener.remove();
+        if (insideListener != null) insideListener.remove();
     }
 }

@@ -4,15 +4,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F7F9"
+    android:background="#F5F7FA"
     tools:context=".AdminDashboardActivity">
 
-    <!-- Header Section -->
+    <!-- Purple Gradient Header -->
     <View
         android:id="@+id/headerBackground"
         android:layout_width="match_parent"
-        android:layout_height="140dp"
-        android:background="#1A237E"
+        android:layout_height="180dp"
+        android:background="@drawable/bg_login_gradient"
+        android:backgroundTint="@color/admin_primary"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
@@ -23,17 +24,18 @@
         android:layout_marginTop="24dp"
         android:text="Admin Panel"
         android:textColor="@color/white"
-        android:textSize="22sp"
+        android:textSize="24sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
+        android:id="@+id/tvAdminSub"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
-        android:text="Full System Access"
-        android:textColor="#B0BEC5"
+        android:text="Apartment Security Manager"
+        android:textColor="#E1BEE7"
         android:textSize="14sp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvAdminTitle" />
@@ -59,64 +61,41 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="-40dp"
+        android:layout_marginTop="-60dp"
         android:layout_marginEnd="16dp"
         app:columnCount="2"
         app:layout_constraintTop_toBottomOf="@id/headerBackground"
         app:rowCount="2">
 
-        <!-- Total Users -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_columnWeight="1"
-            android:layout_margin="6dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="16dp">
-                <TextView
-                    android:id="@+id/tvStatTotalUsers"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="#1A237E"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Total Users"
-                    android:textSize="12sp"
-                    android:textColor="#757575" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
         <!-- Total Visitors Today -->
-        <androidx.cardview.widget.CardView
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardStatVisitors"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             app:layout_columnWeight="1"
             android:layout_margin="6dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:clickable="true"
+            android:focusable="true">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="vertical"
                 android:padding="16dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_myplaces"
+                    app:tint="@color/admin_primary" />
                 <TextView
                     android:id="@+id/tvStatVisitorsToday"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
-                    android:textColor="#00897B"
-                    android:textSize="20sp"
+                    android:textColor="#1A1A1A"
+                    android:textSize="28sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
@@ -125,76 +104,132 @@
                     android:textSize="12sp"
                     android:textColor="#757575" />
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
 
-        <!-- Pending -->
-        <androidx.cardview.widget.CardView
+        <!-- Total Deliveries -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardStatDeliveries"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             app:layout_columnWeight="1"
             android:layout_margin="6dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:clickable="true"
+            android:focusable="true">
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:orientation="vertical"
                 android:padding="16dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_send"
+                    app:tint="#0288D1" />
+                <TextView
+                    android:id="@+id/tvStatDeliveries"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#1A1A1A"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Deliveries Today"
+                    android:textSize="12sp"
+                    android:textColor="#757575" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Active Inside -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardStatActive"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_columnWeight="1"
+            android:layout_margin="6dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:clickable="true"
+            android:focusable="true">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_lock_lock"
+                    app:tint="#2E7D32" />
+                <TextView
+                    android:id="@+id/tvStatActive"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#1A1A1A"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Active Inside"
+                    android:textSize="12sp"
+                    android:textColor="#757575" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Pending Approvals -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardStatPending"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            app:layout_columnWeight="1"
+            android:layout_margin="6dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="4dp"
+            android:clickable="true"
+            android:focusable="true">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    app:tint="#F57C00" />
                 <TextView
                     android:id="@+id/tvStatPending"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="0"
-                    android:textColor="#FBC02D"
-                    android:textSize="20sp"
+                    android:textColor="#1A1A1A"
+                    android:textSize="28sp"
                     android:textStyle="bold" />
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Pending Apps"
+                    android:text="Pending Approvals"
                     android:textSize="12sp"
                     android:textColor="#757575" />
             </LinearLayout>
-        </androidx.cardview.widget.CardView>
-
-        <!-- Rejected Today -->
-        <androidx.cardview.widget.CardView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            app:layout_columnWeight="1"
-            android:layout_margin="6dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="2dp">
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="16dp">
-                <TextView
-                    android:id="@+id/tvStatRejectedToday"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="0"
-                    android:textColor="#D32F2F"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Rejected Today"
-                    android:textSize="12sp"
-                    android:textColor="#757575" />
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+        </com.google.android.material.card.MaterialCardView>
     </androidx.gridlayout.widget.GridLayout>
 
-    <!-- Navigation List -->
+    <!-- Quick Actions -->
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
+        android:layout_marginBottom="60dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/statsGrid">
 
@@ -204,137 +239,213 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <!-- Manage Users -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Quick Actions"
+                android:textColor="#1A1A1A"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="12dp"
+                android:layout_marginStart="4dp"/>
+
+            <!-- Action: Manage Users -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardManageUsers"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="10dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="1dp">
-                <androidx.constraintlayout.widget.ConstraintLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:padding="16dp">
                     <ImageView
-                        android:id="@+id/iconUsers"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:src="@android:drawable/ic_menu_myplaces"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:tint="#1A237E" />
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_menu_edit"
+                        app:tint="@color/admin_primary" />
                     <TextView
-                        android:id="@+id/tvUsersTitle"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:layout_marginStart="16dp"
                         android:text="Manage Users"
-                        android:textStyle="bold"
-                        app:layout_constraintStart_toEndOf="@id/iconUsers"
-                        app:layout_constraintTop_toTopOf="parent" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="View, disable or delete accounts"
-                        android:textColor="#757575"
-                        android:textSize="12sp"
-                        app:layout_constraintStart_toStartOf="@id/tvUsersTitle"
-                        app:layout_constraintTop_toBottomOf="@id/tvUsersTitle" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        android:textColor="#1A1A1A"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_media_play"
+                        app:tint="#BDBDBD" />
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Visitor Logs -->
+            <!-- Action: Visitor Logs -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardAllLogs"
+                android:id="@+id/cardVisitorLogs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="10dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="1dp">
-                <androidx.constraintlayout.widget.ConstraintLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:padding="16dp">
                     <ImageView
-                        android:id="@+id/iconLogs"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_menu_myplaces"
+                        app:tint="@color/admin_primary" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:text="Visitor Logs"
+                        android:textColor="#1A1A1A"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_media_play"
+                        app:tint="#BDBDBD" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action: Delivery Logs -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardDeliveryLogs"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_menu_send"
+                        app:tint="@color/admin_primary" />
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="16dp"
+                        android:text="Delivery Logs"
+                        android:textColor="#1A1A1A"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_media_play"
+                        app:tint="#BDBDBD" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Action: Pending Approvals -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardApprovals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="1dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         android:src="@android:drawable/ic_menu_recent_history"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:tint="#1A237E" />
+                        app:tint="@color/admin_primary" />
                     <TextView
-                        android:id="@+id/tvLogsTitle"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="All Visitor Logs"
-                        android:textStyle="bold"
-                        app:layout_constraintStart_toEndOf="@id/iconLogs"
-                        app:layout_constraintTop_toTopOf="parent" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Browse complete visitor history"
-                        android:textColor="#757575"
-                        android:textSize="12sp"
-                        app:layout_constraintStart_toStartOf="@id/tvLogsTitle"
-                        app:layout_constraintTop_toBottomOf="@id/tvLogsTitle" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        android:text="Pending Approvals"
+                        android:textColor="#1A1A1A"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_media_play"
+                        app:tint="#BDBDBD" />
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Export Logs -->
+            <!-- Action: Reports -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardExportLogs"
+                android:id="@+id/cardReports"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
+                android:layout_marginBottom="10dp"
                 android:clickable="true"
                 android:focusable="true"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="1dp">
-                <androidx.constraintlayout.widget.ConstraintLayout
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:padding="16dp">
                     <ImageView
-                        android:id="@+id/iconExport"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:src="@android:drawable/stat_sys_download"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:tint="#1A237E" />
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:src="@android:drawable/ic_menu_view"
+                        app:tint="@color/admin_primary" />
                     <TextView
-                        android:id="@+id/tvExportTitle"
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:layout_marginStart="16dp"
-                        android:text="Export Logs"
-                        android:textStyle="bold"
-                        app:layout_constraintStart_toEndOf="@id/iconExport"
-                        app:layout_constraintTop_toTopOf="parent" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Export visitor data as CSV"
-                        android:textColor="#757575"
-                        android:textSize="12sp"
-                        app:layout_constraintStart_toStartOf="@id/tvExportTitle"
-                        app:layout_constraintTop_toBottomOf="@id/tvExportTitle" />
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        android:text="Reports"
+                        android:textColor="#1A1A1A"
+                        android:textStyle="bold" />
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@android:drawable/ic_media_play"
+                        app:tint="#BDBDBD" />
+                </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/adminBottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        app:itemIconTint="@color/admin_primary"
+        app:itemTextColor="@color/admin_primary"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:menu="@menu/admin_bottom_nav_menu" />
 
     <ProgressBar
         android:id="@+id/progressBar"
