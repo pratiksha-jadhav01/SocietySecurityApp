@@ -3,6 +3,7 @@ package com.example.securiodb;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -11,21 +12,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.messaging.FirebaseMessaging;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Locale;
 
 public class GuardDashboardActivity extends AppCompatActivity {
 
     private TextView tvWelcome, tvVisitorsToday, tvDeliveriesToday, tvInside;
-    private MaterialCardView cardAddVisitor, cardAddDelivery, cardMarkExit, cardLiveStatus, cardMyEntries;
+    private MaterialCardView cardAddVisitor, cardAddDelivery, cardMarkExit, cardLiveStatus, cardMyEntries, cardDailyHelpers;
+    private View searchBar, ivLogoutContainer;
     private BottomNavigationView bottomNav;
 
     private FirebaseFirestore db;
@@ -38,7 +35,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_guard_dashboard);
 
-        // Initialize Firebase
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
         if (mAuth.getCurrentUser() == null) {
@@ -53,7 +49,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
         setupStatsListeners();
         setupClickListeners();
         setupBottomNav();
-        updateFcmToken();
     }
 
     private void initViews() {
@@ -67,13 +62,16 @@ public class GuardDashboardActivity extends AppCompatActivity {
         cardMarkExit = findViewById(R.id.cardMarkExit);
         cardLiveStatus = findViewById(R.id.cardLiveStatus);
         cardMyEntries = findViewById(R.id.cardMyEntries);
-
+        cardDailyHelpers = findViewById(R.id.cardDailyHelpers);
+        
+        searchBar = findViewById(R.id.searchBar);
+        ivLogoutContainer = findViewById(R.id.ivLogoutContainer);
         bottomNav = findViewById(R.id.bottomNav);
     }
 
     private void fetchGuardName() {
         db.collection("users").document(guardUid).get().addOnSuccessListener(documentSnapshot -> {
-            if (documentSnapshot.exists()) {
+            if (documentSnapshot.exists() && !isFinishing()) {
                 String name = documentSnapshot.getString("name");
                 tvWelcome.setText("Hey, " + (name != null ? name : "Guard") + " 👋");
             }
@@ -85,57 +83,65 @@ public class GuardDashboardActivity extends AppCompatActivity {
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         calendar.set(Calendar.MINUTE, 0);
         calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
         Date startOfDay = calendar.getTime();
 
-        // Visitors Today Listener
+        // 1. Visitors Today (Count all today's entries where purpose is "Visitor")
         visitorsListener = db.collection("visitors")
-                .whereEqualTo("createdBy", guardUid)
                 .whereEqualTo("purpose", "Visitor")
                 .whereGreaterThanOrEqualTo("timestamp", startOfDay)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
+                    if (error != null || isFinishing()) return;
                     if (value != null) tvVisitorsToday.setText(String.valueOf(value.size()));
                 });
 
-        // Deliveries Today Listener
+        // 2. Deliveries Today (Count all today's entries where purpose is "Delivery")
         deliveriesListener = db.collection("visitors")
-                .whereEqualTo("createdBy", guardUid)
                 .whereEqualTo("purpose", "Delivery")
                 .whereGreaterThanOrEqualTo("timestamp", startOfDay)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
+                    if (error != null || isFinishing()) return;
                     if (value != null) tvDeliveriesToday.setText(String.valueOf(value.size()));
                 });
 
-        // Currently Inside Listener (Active Inside)
+        // 3. Currently Inside (Count entries that haven't marked exit yet)
         insideListener = db.collection("visitors")
-                .whereEqualTo("createdBy", guardUid)
-                .whereEqualTo("status", "Approved")
                 .whereEqualTo("exitTime", null)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) {
-                        Log.e("Firestore", "Error fetching inside stats", error);
+                    if (error != null || isFinishing()) {
+                        Log.e("GuardDashboard", "Error fetching inside stats", error);
                         return;
                     }
-                    if (value != null) tvInside.setText(String.valueOf(value.size()));
+                    if (value != null) {
+                        tvInside.setText(String.valueOf(value.size()));
+                    }
                 });
     }
 
     private void setupClickListeners() {
-        cardAddVisitor.setOnClickListener(v -> {
-            Intent intent = new Intent(this, VisitorEntryActivity.class);
-            intent.putExtra("purpose", "Visitor");
-            startActivity(intent);
-        });
-
-        cardAddDelivery.setOnClickListener(v -> {
-            Intent intent = new Intent(this, AddDeliveryActivity.class);
-            startActivity(intent);
-        });
-
+        cardAddVisitor.setOnClickListener(v -> startActivity(new Intent(this, VisitorEntryActivity.class)));
+        cardAddDelivery.setOnClickListener(v -> startActivity(new Intent(this, AddDeliveryActivity.class)));
         cardMarkExit.setOnClickListener(v -> startActivity(new Intent(this, MarkExitActivity.class)));
         cardLiveStatus.setOnClickListener(v -> startActivity(new Intent(this, LiveStatusActivity.class)));
         cardMyEntries.setOnClickListener(v -> startActivity(new Intent(this, StatusListActivity.class)));
+        cardDailyHelpers.setOnClickListener(v -> startActivity(new Intent(this, GuardHelperListActivity.class)));
+        
+        searchBar.setOnClickListener(v -> {
+            Intent intent = new Intent(this, StatusListActivity.class);
+            intent.putExtra("isSearch", true);
+            startActivity(intent);
+        });
+
+        if (ivLogoutContainer != null) {
+            ivLogoutContainer.setOnClickListener(v -> {
+                mAuth.signOut();
+                Intent intent = new Intent(GuardDashboardActivity.this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
+                Toast.makeText(this, "Logged out successfully", Toast.LENGTH_SHORT).show();
+            });
+        }
     }
 
     private void setupBottomNav() {
@@ -153,15 +159,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
                 return true;
             }
             return true;
-        });
-    }
-
-    private void updateFcmToken() {
-        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
-            if (task.isSuccessful() && task.getResult() != null) {
-                String token = task.getResult();
-                db.collection("users").document(guardUid).update("fcmToken", token);
-            }
         });
     }
 

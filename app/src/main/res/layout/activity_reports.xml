@@ -3,21 +3,21 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bgLight">
+    android:background="@color/body_bg">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/admin_primary">
+        android:background="@color/cream_header">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:navigationIconTint="@color/white"
+            app:navigationIconTint="@color/dark_brown"
             app:title="Reports &amp; Analytics"
-            app:titleTextColor="@color/white" />
+            app:titleTextColor="@color/dark_brown" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
@@ -37,9 +37,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:text="Select Date Range"
+                android:textColor="@color/primary"
                 app:icon="@android:drawable/ic_menu_today"
-                app:strokeColor="@color/admin_primary"
-                app:rippleColor="@color/admin_primary_light"/>
+                app:iconTint="@color/primary"
+                app:strokeColor="@color/primary"
+                app:rippleColor="@color/primary_light"
+                app:cornerRadius="12dp" />
 
             <androidx.gridlayout.widget.GridLayout
                 android:layout_width="match_parent"
@@ -52,7 +55,8 @@
                     android:layout_height="wrap_content"
                     app:layout_columnWeight="1"
                     android:layout_margin="4dp"
-                    app:cardCornerRadius="12dp">
+                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="@color/card_white">
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -66,11 +70,12 @@
                             android:text="0"
                             android:textSize="24sp"
                             android:textStyle="bold"
-                            android:textColor="@color/admin_primary"/>
+                            android:textColor="@color/primary"/>
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Total Visitors"
+                            android:textColor="@color/soft_brown"
                             android:textSize="12sp"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -80,7 +85,8 @@
                     android:layout_height="wrap_content"
                     app:layout_columnWeight="1"
                     android:layout_margin="4dp"
-                    app:cardCornerRadius="12dp">
+                    app:cardCornerRadius="12dp"
+                    app:cardBackgroundColor="@color/card_white">
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -94,11 +100,12 @@
                             android:text="0"
                             android:textSize="24sp"
                             android:textStyle="bold"
-                            android:textColor="@color/status_delivery"/>
+                            android:textColor="@color/primary"/>
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Total Deliveries"
+                            android:textColor="@color/soft_brown"
                             android:textSize="12sp"/>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -110,7 +117,8 @@
                 android:layout_height="300dp"
                 android:layout_marginTop="16dp"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="2dp">
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/card_white">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
@@ -121,6 +129,7 @@
                         android:layout_height="wrap_content"
                         android:text="Visitor Traffic (Last 7 Days)"
                         android:textStyle="bold"
+                        android:textColor="@color/dark_brown"
                         android:layout_marginBottom="8dp"/>
                     <com.github.mikephil.charting.charts.BarChart
                         android:id="@+id/barChart"
@@ -135,7 +144,8 @@
                 android:layout_height="56dp"
                 android:layout_marginTop="24dp"
                 android:text="EXPORT CSV REPORT"
-                app:backgroundTint="@color/admin_primary"
+                android:textColor="@color/white"
+                app:backgroundTint="@color/primary"
                 app:cornerRadius="12dp" />
 
         </LinearLayout>

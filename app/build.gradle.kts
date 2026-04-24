@@ -46,11 +46,17 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.messaging)
     implementation(libs.firebase.database)
-    // NOTE: firebase-storage is intentionally NOT included
+    implementation(libs.firebase.storage)
 
-    // Glide
+    // Volley — for Cloudinary REST API calls
+    implementation(libs.volley)
+
+    // Glide — for loading images from Cloudinary URLs
     implementation(libs.glide)
     annotationProcessor(libs.glide.compiler)
+
+    // CircleImageView — for circular avatar in RecyclerView
+    implementation(libs.circleimageview)
 
     // Charts
     implementation(libs.mpandroidchart)

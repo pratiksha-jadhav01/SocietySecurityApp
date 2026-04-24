@@ -4,22 +4,24 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F5F7FA"
+    android:background="@color/body_bg"
     tools:context=".StatusListActivity">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp"
         app:layout_constraintTop_toTopOf="parent">
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="#1565C0"
             app:title="My Entries"
-            app:titleTextColor="@color/white"
-            app:navigationIcon="@android:drawable/ic_menu_revert" />
+            app:titleTextColor="@color/dark_brown"
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:navigationIconTint="@color/dark_brown" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <HorizontalScrollView
@@ -41,25 +43,41 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="All" />
+                android:text="All"
+                app:chipBackgroundColor="@color/card_white"
+                android:textColor="@color/dark_brown"
+                app:chipStrokeColor="@color/border_color"
+                app:chipStrokeWidth="1dp" />
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipPending"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Pending" />
+                android:text="Pending"
+                app:chipBackgroundColor="@color/card_white"
+                android:textColor="@color/dark_brown"
+                app:chipStrokeColor="@color/border_color"
+                app:chipStrokeWidth="1dp" />
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipApproved"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Approved" />
+                android:text="Approved"
+                app:chipBackgroundColor="@color/card_white"
+                android:textColor="@color/dark_brown"
+                app:chipStrokeColor="@color/border_color"
+                app:chipStrokeWidth="1dp" />
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipRejected"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Rejected" />
+                android:text="Rejected"
+                app:chipBackgroundColor="@color/card_white"
+                android:textColor="@color/dark_brown"
+                app:chipStrokeColor="@color/border_color"
+                app:chipStrokeWidth="1dp" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
@@ -67,6 +85,8 @@
         android:id="@+id/rvEntries"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:paddingHorizontal="8dp"
+        android:clipToPadding="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toBottomOf="@id/chipsScroll"
         tools:listitem="@layout/item_status_visitor" />
@@ -76,6 +96,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="No entries found"
+        android:textColor="@color/soft_brown"
+        android:textStyle="bold"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

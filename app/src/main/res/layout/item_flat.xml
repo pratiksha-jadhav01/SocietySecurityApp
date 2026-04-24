@@ -6,7 +6,10 @@
     android:layout_marginHorizontal="8dp"
     android:layout_marginVertical="4dp"
     app:cardCornerRadius="12dp"
-    app:cardElevation="1dp">
+    app:cardElevation="0dp"
+    app:strokeColor="#E8D5BC"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="#FFF9F2">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -18,7 +21,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="A-101"
-            android:textColor="@color/admin_primary"
+            android:textColor="#A07850"
             android:textSize="20sp"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"
@@ -29,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Owner: John Doe"
-            android:textColor="#1A1A1A"
+            android:textColor="#6B4C2A"
             android:textSize="14sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvFlatNumber" />
@@ -39,7 +42,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Floor: 1"
-            android:textColor="#757575"
+            android:textColor="#A07850"
             android:textSize="12sp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tvOwnerName" />
@@ -50,6 +53,9 @@
             android:layout_height="wrap_content"
             android:text="Active"
             android:textSize="12sp"
+            android:textColor="#6B4C2A"
+            app:thumbTint="#A07850"
+            app:trackTint="#C8A882"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -60,6 +66,7 @@
             android:layout_height="wrap_content"
             android:text="Assign Owner"
             android:textSize="12sp"
+            android:textColor="#A07850"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/switchStatus" />

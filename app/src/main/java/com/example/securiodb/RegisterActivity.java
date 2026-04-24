@@ -22,6 +22,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ServerValue;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -40,8 +41,10 @@ public class RegisterActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
+    private FirebaseFirestore mFirestore;
 
     private static final String ADMIN_SECRET = "APT@Admin2024";
+    private static final String GUARD_SECRET = "APT@Guard2024";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +54,7 @@ public class RegisterActivity extends AppCompatActivity {
         // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
+        mFirestore = FirebaseFirestore.getInstance();
 
         // Bind Views
         mainContainer = findViewById(android.R.id.content);
@@ -86,10 +90,22 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void setupRoleChips() {
-        chipAdmin.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            TransitionManager.beginDelayedTransition(mainContainer);
-            tilAdminKey.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-        });
+        chipAdmin.setOnCheckedChangeListener((buttonView, isChecked) -> updateSecretKeyVisibility());
+        chipGuard.setOnCheckedChangeListener((buttonView, isChecked) -> updateSecretKeyVisibility());
+        chipOwner.setOnCheckedChangeListener((buttonView, isChecked) -> updateSecretKeyVisibility());
+    }
+
+    private void updateSecretKeyVisibility() {
+        TransitionManager.beginDelayedTransition(mainContainer);
+        if (chipAdmin.isChecked()) {
+            tilAdminKey.setVisibility(View.VISIBLE);
+            tilAdminKey.setHint("Admin Secret Key");
+        } else if (chipGuard.isChecked()) {
+            tilAdminKey.setVisibility(View.VISIBLE);
+            tilAdminKey.setHint("Guard Secret Key");
+        } else {
+            tilAdminKey.setVisibility(View.GONE);
+        }
     }
 
     private void registerUser() {
@@ -119,11 +135,17 @@ public class RegisterActivity extends AppCompatActivity {
         if (password.length() < 6) { etPassword.setError("Min 6 characters"); return; }
         if (!password.equals(confirmPassword)) { etConfirmPassword.setError("Passwords don't match"); return; }
 
-        // Admin Key Validation
+        // Secret Key Validation
         if ("Admin".equals(selectedRole)) {
             String enteredKey = etAdminKey.getText().toString().trim();
             if (!ADMIN_SECRET.equals(enteredKey)) {
                 etAdminKey.setError("Invalid admin key");
+                return;
+            }
+        } else if ("Guard".equals(selectedRole)) {
+            String enteredKey = etAdminKey.getText().toString().trim();
+            if (!GUARD_SECRET.equals(enteredKey)) {
+                etAdminKey.setError("Invalid guard key");
                 return;
             }
         }
@@ -157,13 +179,24 @@ public class RegisterActivity extends AppCompatActivity {
         user.put("flatNumber", flat);
         user.put("createdAt", ServerValue.TIMESTAMP);
 
-        // 3. Save to "users" node in Realtime Database
-        mDatabase.child("users").child(uid)
-                .setValue(user)
+        // Save to Realtime Database
+        mDatabase.child("users").child(uid).setValue(user)
                 .addOnSuccessListener(aVoid -> {
-                    progressBar.setVisibility(View.GONE);
-                    Toast.makeText(RegisterActivity.this, "Registration Successful", Toast.LENGTH_SHORT).show();
-                    navigateToDashboard(role.toLowerCase());
+                    // Also save to Firestore for consistency across the app
+                    Map<String, Object> firestoreUser = new HashMap<>(user);
+                    firestoreUser.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
+                    
+                    mFirestore.collection("users").document(uid).set(firestoreUser)
+                            .addOnSuccessListener(v -> {
+                                progressBar.setVisibility(View.GONE);
+                                Toast.makeText(RegisterActivity.this, "Registration Successful", Toast.LENGTH_SHORT).show();
+                                navigateToDashboard(role.toLowerCase());
+                            })
+                            .addOnFailureListener(e -> {
+                                progressBar.setVisibility(View.GONE);
+                                btnRegister.setEnabled(true);
+                                Toast.makeText(RegisterActivity.this, "Firestore Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                            });
                 })
                 .addOnFailureListener(e -> {
                     progressBar.setVisibility(View.GONE);

@@ -5,6 +5,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -23,7 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class StatusListActivity extends AppCompatActivity implements StatusAdapter.OnExitClickListener {
+public class StatusListActivity extends AppCompatActivity implements StatusAdapter.OnEntryActionListener {
 
     private RecyclerView rvEntries;
     private ChipGroup chipGroupFilter;
@@ -65,10 +66,9 @@ public class StatusListActivity extends AppCompatActivity implements StatusAdapt
     private void setupRealtimeListener() {
         registration = db.collection("visitors")
                 .whereEqualTo("createdBy", guardUid)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
-                        Toast.makeText(this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Error loading history", Toast.LENGTH_SHORT).show();
                         return;
                     }
 
@@ -81,6 +81,19 @@ public class StatusListActivity extends AppCompatActivity implements StatusAdapt
                                 allEntries.add(data);
                             }
                         }
+                        
+                        // SORTING MANUALLY in Java
+                        java.util.Collections.sort(allEntries, (a, b) -> {
+                            Object t1 = a.get("timestamp");
+                            Object t2 = b.get("timestamp");
+                            long l1 = 0, l2 = 0;
+                            if (t1 instanceof com.google.firebase.Timestamp) l1 = ((com.google.firebase.Timestamp) t1).toDate().getTime();
+                            else if (t1 instanceof Long) l1 = (Long) t1;
+                            if (t2 instanceof com.google.firebase.Timestamp) l2 = ((com.google.firebase.Timestamp) t2).toDate().getTime();
+                            else if (t2 instanceof Long) l2 = (Long) t2;
+                            return Long.compare(l2, l1); // Descending
+                        });
+
                         applyFilter();
                     }
                 });
@@ -117,8 +130,21 @@ public class StatusListActivity extends AppCompatActivity implements StatusAdapt
     public void onExitClick(String docId) {
         db.collection("visitors").document(docId)
                 .update("exitTime", FieldValue.serverTimestamp())
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Exit marked", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed to mark exit", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Exit marked", Toast.LENGTH_SHORT).show());
+    }
+
+    @Override
+    public void onDeleteClick(String docId) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Entry")
+                .setMessage("Are you sure you want to delete this entry?")
+                .setPositiveButton("Delete", (dialog, which) -> {
+                    db.collection("visitors").document(docId).delete()
+                            .addOnSuccessListener(aVoid -> Toast.makeText(this, "Entry deleted", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e -> Toast.makeText(this, "Delete failed", Toast.LENGTH_SHORT).show());
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     @Override

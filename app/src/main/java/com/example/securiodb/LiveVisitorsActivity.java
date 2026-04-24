@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.securiodb.adapter.VisitorAdapter;
-import com.example.securiodb.models.Visitor;
+import com.example.securiodb.models.VisitorModel;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -25,7 +25,7 @@ public class LiveVisitorsActivity extends AppCompatActivity {
     
     private FirebaseFirestore db;
     private String flatNumber;
-    private List<Visitor> liveList = new ArrayList<>();
+    private List<VisitorModel> liveList = new ArrayList<>();
     private VisitorAdapter adapter;
     private ListenerRegistration liveListener;
 
@@ -39,17 +39,22 @@ public class LiveVisitorsActivity extends AppCompatActivity {
         tvLiveCount = findViewById(R.id.tvLiveCount);
 
         rvLiveVisitors.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new VisitorAdapter(liveList);
+        // Using the correct constructor for com.example.securiodb.adapter.VisitorAdapter
+        adapter = new VisitorAdapter(this, liveList, null);
         rvLiveVisitors.setAdapter(adapter);
 
         fetchFlatAndStartLiveListener();
     }
 
     private void fetchFlatAndStartLiveListener() {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+        
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         db.collection("users").document(uid).get().addOnSuccessListener(doc -> {
             flatNumber = doc.getString("flatNumber");
-            startLiveListener();
+            if (flatNumber != null) {
+                startLiveListener();
+            }
         });
     }
 
@@ -59,11 +64,15 @@ public class LiveVisitorsActivity extends AppCompatActivity {
                 .whereEqualTo("status", "Approved")
                 .whereEqualTo("exitTime", null)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
+                    if (error != null || value == null) return;
                     
                     liveList.clear();
                     for (DocumentSnapshot doc : value.getDocuments()) {
-                        liveList.add(doc.toObject(Visitor.class));
+                        VisitorModel v = doc.toObject(VisitorModel.class);
+                        if (v != null) {
+                            v.setDocId(doc.getId());
+                            liveList.add(v);
+                        }
                     }
                     adapter.notifyDataSetChanged();
                     tvLiveCount.setText(liveList.size() + " People");

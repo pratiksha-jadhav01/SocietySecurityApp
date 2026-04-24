@@ -93,7 +93,7 @@ public class OwnerApprovalsActivity extends AppCompatActivity {
     // ─── REAL-TIME LISTENER — fires instantly on new entries ───
     private void startRealTimeListener(String flatNo) {
         listenerReg = db.collection("visitors")
-            .whereEqualTo("flatNo",  flatNo)   // only this owner's flat
+            .whereIn("flatNumber", java.util.Arrays.asList(flatNo, flatNo.toUpperCase(), flatNo.toLowerCase()))   // Support different cases
             .whereEqualTo("status",  "Pending") // only pending requests
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener((snapshots, error) -> {

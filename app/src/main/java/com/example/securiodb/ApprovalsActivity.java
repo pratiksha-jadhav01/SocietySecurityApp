@@ -8,7 +8,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.securiodb.adapter.VisitorAdapter;
 import com.example.securiodb.models.Visitor;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.snackbar.Snackbar;
@@ -43,6 +42,7 @@ public class ApprovalsActivity extends AppCompatActivity implements VisitorAdapt
     private VisitorAdapter adapter;
     private ListenerRegistration visitorListener;
     private String currentStatusFilter = "Pending";
+    private boolean isAdmin = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,39 +52,47 @@ public class ApprovalsActivity extends AppCompatActivity implements VisitorAdapt
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
         
+        isAdmin = getIntent().getBooleanExtra("IS_ADMIN", false);
+        String initialFilter = getIntent().getStringExtra("FILTER_STATUS");
+        if (initialFilter != null) {
+            currentStatusFilter = initialFilter;
+        }
+
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
+        if (isAdmin) {
+            toolbar.setTitle("System Approvals");
+        }
 
         rvApprovals = findViewById(R.id.rvApprovals);
         tabLayout = findViewById(R.id.tabLayout);
         emptyState = findViewById(R.id.emptyState);
 
         rvApprovals.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new VisitorAdapter(visitorList, true, this);
+        // role "admin" allows seeing all, "owner" filters by flat
+        adapter = new VisitorAdapter(visitorList, isAdmin ? "admin" : "owner", this);
         rvApprovals.setAdapter(adapter);
 
-        fetchOwnerFlatAndStartListener();
-        setupTabs();
+        if (isAdmin) {
+            setupAdminTabs();
+            listenForVisitors();
+        } else {
+            fetchOwnerFlatAndStartListener();
+            setupTabs();
+        }
     }
 
     private void fetchOwnerFlatAndStartListener() {
         if (mAuth.getCurrentUser() == null) return;
         
         String uid = mAuth.getCurrentUser().getUid();
-        // Use Realtime Database to fetch user profile, same as OwnerDashboardActivity
-        FirebaseDatabase.getInstance().getReference("users").child(uid)
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        flatNumber = snapshot.child("flatNumber").getValue(String.class);
-                        listenForVisitors();
-                    }
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener(documentSnapshot -> {
+                if (documentSnapshot.exists()) {
+                    flatNumber = documentSnapshot.getString("flatNumber");
+                    listenForVisitors();
                 }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {}
             });
     }
 
@@ -102,14 +110,37 @@ public class ApprovalsActivity extends AppCompatActivity implements VisitorAdapt
         });
     }
 
+    private void setupAdminTabs() {
+        if (tabLayout.getTabCount() > 0) {
+            if (currentStatusFilter.equals("All")) {
+                tabLayout.getTabAt(1).select();
+            } else {
+                tabLayout.getTabAt(0).select();
+            }
+        }
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                currentStatusFilter = tab.getPosition() == 0 ? "Pending" : "All";
+                listenForVisitors();
+            }
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {}
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {}
+        });
+    }
+
     private void listenForVisitors() {
         if (visitorListener != null) visitorListener.remove();
-        if (flatNumber == null) return;
 
-        // Ensure we are using the correct field name "flatNumber" as used in VisitorEntryActivity
         Query query = db.collection("visitors")
-                .whereEqualTo("flatNumber", flatNumber)
                 .orderBy("timestamp", Query.Direction.DESCENDING);
+
+        if (!isAdmin) {
+            if (flatNumber == null) return;
+            query = query.whereEqualTo("flatNumber", flatNumber);
+        }
 
         if (currentStatusFilter.equals("Pending")) {
             query = query.whereEqualTo("status", "Pending");
@@ -145,8 +176,8 @@ public class ApprovalsActivity extends AppCompatActivity implements VisitorAdapt
     }
 
     @Override
-    public void onOverride(Visitor visitor) {
-        updateStatus(visitor, "Approved");
+    public void onMarkExit(Visitor visitor) {
+        // Implementation for marking exit if needed
     }
 
     private void updateStatus(Visitor visitor, String status) {

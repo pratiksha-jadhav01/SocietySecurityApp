@@ -1,37 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="primary_green">#2E7D32</color>
-    <color name="primary_dark_green">#1B5E20</color>
-    <color name="primary_light_green">#E8F5E9</color>
-    <color name="amber_pending">#FFBF00</color>
-    <color name="red_reject">#C62828</color>
-    <color name="bg_light">#F8FAFC</color>
-    <color name="bgLight">#F8FAFC</color>
-    <color name="text_main">#1A1A1A</color>
-    <color name="text_secondary">#757575</color>
+    <!-- Root/body background -->
+    <color name="body_bg">#FAF5EE</color>
+    <!-- Header background -->
+    <color name="header_bg">#F2E8D9</color>
+    <color name="cream_header">#F2E8D9</color>
 
-    <!-- Project Colors -->
-    <color name="blue_main">#1565C0</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <!-- Text Colors -->
+    <color name="text_primary">#6B4C2A</color>
+    <color name="dark_brown">#6B4C2A</color>
+    <color name="text_secondary">#A07850</color>
+    <color name="soft_brown">#A07850</color>
+    <color name="coffee_brown">#A07850</color>
+    <color name="text_hint">#C8A882</color>
+    <color name="hint_brown">#C8A882</color>
 
-    <!-- Admin Colors -->
-    <color name="admin_primary">#1565C0</color>
-    <color name="admin_primary_dark">#0D47A1</color>
-    <color name="admin_primary_light">#E3F2FD</color>
+    <!-- Primary / Brand -->
+    <color name="primary">#A07850</color>
+    <color name="primary_dark">#8B6440</color>
+    <color name="primary_light">#C8A882</color>
+    <color name="button_bg">#A07850</color>
+    <color name="text_on_primary">#FFF9F2</color>
+    <color name="button_text">#FFF9F2</color>
 
-    <!-- Status Colors -->
-    <color name="status_approved">#2E7D32</color>
-    <color name="status_pending">#FFBF00</color>
-    <color name="status_rejected">#C62828</color>
-    <color name="status_delivery">#1565C0</color>
-    <color name="status_visitor">#6A1B9A</color>
+    <!-- Card Colors -->
+    <color name="card_bg">#FFF9F2</color>
+    <color name="card_white">#FFF9F2</color>
+    <color name="light_cream">#FFF9F2</color>
+    <color name="card_stroke">#E8D5BC</color>
+    <color name="border_color">#E8D5BC</color>
+    <color name="divider">#E8D5BC</color>
 
-    <!-- Company Colors -->
-    <color name="amazon">#FF9900</color>
-    <color name="swiggy">#FC8019</color>
-    <color name="zomato">#E23744</color>
-    <color name="flipkart">#2874F0</color>
+    <!-- Accent Card Colors -->
+    <color name="accent_card_bg">#E8D0B0</color>
+    <color name="beige_accent">#E8D0B0</color>
+    <color name="accent_card_stroke">#D4B896</color>
+    <color name="divider_beige">#D4B896</color>
+    <color name="light_beige">#F5EAD8</color>
+
+    <!-- Components -->
+    <color name="avatar_bg">#E0C9A6</color>
+    <color name="search_bg">#EFE3CF</color>
+    <color name="nav_bg">#FFFFFF</color>
+    <color name="nav_active">#7A5030</color>
+    <color name="nav_inactive">#C8A882</color>
+    <color name="chip_selected_bg">#A07850</color>
+
+    <!-- Status Colors (Functional) -->
+    <color name="status_approved_bg">#EAF3DE</color>
+    <color name="status_approved_text">#2E7D32</color>
+    <color name="status_rejected_bg">#FFEBEE</color>
+    <color name="status_rejected_text">#C62828</color>
+    <color name="status_pending_bg">#F5E6CC</color>
+    <color name="status_pending_text">#8B5E30</color>
+    <color name="badge_red">#C62828</color>
+
+    <!-- Basics -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+
+    <!-- Legacy aliases -->
+    <color name="admin_primary">#A07850</color>
+    <color name="bgLight">#FAF5EE</color>
+    <color name="text_main">#6B4C2A</color>
 </resources>

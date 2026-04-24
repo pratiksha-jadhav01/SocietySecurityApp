@@ -1,0 +1,115 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- HELPER FUNCTIONS ---
+
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function getRole() {
+      let data = getUserData();
+      return data.get('role', 'none');
+    }
+
+    function isAdmin() {
+      if (!isAuth()) return false;
+      let role = getRole();
+      return role == 'admin' || role == 'Admin' || role == 'system administrator';
+    }
+
+    function isOwner() {
+      if (!isAuth()) return false;
+      let role = getRole();
+      return role == 'owner' || role == 'Owner';
+    }
+
+    function isGuard() {
+      if (!isAuth()) return false;
+      let role = getRole();
+      return role == 'guard' || role == 'Guard';
+    }
+
+    function ownerFlat() {
+      let data = getUserData();
+      return data.get('flatNumber', data.get('flatNo', ''));
+    }
+
+    // --- COLLECTION RULES ---
+
+    // USERS
+    match /users/{userId} {
+      allow read:  if isAuth();
+      allow write: if isAuth() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // VISITORS
+    match /visitors/{visitorId} {
+      allow create: if isAuth() && (isGuard() || isAdmin());
+      allow read:   if isAuth();
+      allow update: if isAuth() && (
+          isAdmin() ||
+          (resource.data.get('flatNumber', '') == ownerFlat()) ||
+          (resource.data.get('createdBy', '') == request.auth.uid)
+      );
+      allow delete: if isAdmin();
+    }
+
+    // DAILY HELPERS
+    match /dailyHelpers/{helperId} {
+      allow read:   if isAuth();
+      allow create: if isAuth() && (isOwner() || isAdmin());
+      allow update, delete: if isAuth() && (
+          isAdmin() ||
+          resource.data.ownerUid == request.auth.uid
+      );
+    }
+
+    // BILLS
+    match /bills/{billId} {
+      allow read:   if isAuth();
+      // Allow owners to update the status of their own bills
+      allow update: if isAuth() && (
+          isAdmin() ||
+          (isOwner() && resource.data.flatNo == ownerFlat())
+      );
+      allow create, delete: if isAuth() && isAdmin();
+    }
+
+    // MAINTENANCE (Legacy/Compatibility)
+    match /maintenance/{billId} {
+      allow read:   if isAuth();
+      allow update: if isAuth() && (
+          isAdmin() ||
+          (isOwner() && resource.data.flatNo == ownerFlat())
+      );
+      allow create, delete: if isAuth() && isAdmin();
+    }
+
+    // COMPLAINTS
+    match /complaints/{complaintId} {
+      allow create: if isAuth() && (isOwner() || isAdmin());
+      allow read:   if isAuth() && (
+          isAdmin() || resource.data.get('flatNo', '') == ownerFlat()
+      );
+      allow update: if isAuth() && isAdmin();
+    }
+
+    // NOTICES
+    match /notices/{noticeId} {
+      allow read:  if isAuth();
+      allow write: if isAuth() && isAdmin();
+    }
+
+    // NOTIFICATIONS
+    match /notifications/{notifId} {
+      allow create, read, update: if isAuth();
+      allow delete: if isAdmin();
+    }
+  }
+}

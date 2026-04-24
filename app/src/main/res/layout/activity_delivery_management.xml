@@ -3,19 +3,19 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_light">
+    android:background="@color/body_bg">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary_green">
+        android:background="@color/cream_header">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:title="My Deliveries"
-            app:titleTextColor="@color/white" />
+            app:titleTextColor="@color/dark_brown" />
 
         <HorizontalScrollView
             android:layout_width="match_parent"
@@ -36,28 +36,44 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Today"
-                    android:checked="true" />
+                    android:checked="true"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipDelAll"
                     style="@style/Widget.MaterialComponents.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="All" />
+                    android:text="All"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipDelPending"
                     style="@style/Widget.MaterialComponents.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Pending" />
+                    android:text="Pending"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipDelReceived"
                     style="@style/Widget.MaterialComponents.Chip.Filter"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Received" />
+                    android:text="Received"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
 

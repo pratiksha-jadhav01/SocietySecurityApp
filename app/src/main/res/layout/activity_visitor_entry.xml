@@ -3,144 +3,197 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/body_bg">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
-            android:background="@color/primary_green"
-            app:navigationIcon="@drawable/ic_home"
-            app:title="New Visitor Entry"
-            app:titleTextColor="@color/white" />
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:navigationIconTint="@color/dark_brown"
+            app:title="Visitor Check-in"
+            app:titleTextColor="@color/dark_brown" />
 
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp">
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="32dp"
+            app:cardCornerRadius="30dp"
+            app:cardElevation="12dp"
+            app:cardBackgroundColor="@color/card_white">
 
-            <!-- Photo Section -->
-            <com.google.android.material.card.MaterialCardView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/bg_light"
-                app:strokeWidth="1dp">
+                android:orientation="vertical"
+                android:padding="32dp">
 
-                <LinearLayout
+                <!-- Photo Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="IDENTIFICATION"
+                    android:textColor="@color/soft_brown"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.15"
+                    android:layout_marginBottom="16dp"/>
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="220dp"
+                    android:layout_marginBottom="32dp"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_color"
+                    app:strokeWidth="1dp"
+                    app:cardBackgroundColor="@color/body_bg">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <ImageView
+                            android:id="@+id/imgVisitorPhoto"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop"
+                            android:contentDescription="Visitor Photo Preview"
+                            android:src="@android:drawable/ic_menu_gallery"
+                            app:tint="@color/soft_brown" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnCapturePhoto"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|center_horizontal"
+                            android:layout_marginBottom="24dp"
+                            android:text="Take Picture"
+                            android:textColor="@color/white"
+                            android:textStyle="bold"
+                            app:backgroundTint="@color/primary"
+                            app:cornerRadius="20dp" />
+                    </FrameLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Visitor Details Form -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="16dp">
+                    android:layout_marginBottom="16dp"
+                    app:hintEnabled="false"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="0dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etName"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:hint="Full Name"
+                        android:inputType="textPersonName"
+                        android:textColor="@color/dark_brown"
+                        android:textColorHint="@color/soft_brown"
+                        android:textSize="15sp"
+                        android:background="@drawable/bg_search_cream"
+                        android:paddingHorizontal="24dp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-                    <ImageView
-                        android:id="@+id/imgVisitorPhoto"
-                        android:layout_width="150dp"
-                        android:layout_height="150dp"
-                        android:layout_marginBottom="16dp"
-                        android:background="@color/bg_light"
-                        android:scaleType="centerCrop"
-                        android:contentDescription="Visitor Photo Preview"
-                        android:src="@drawable/ic_launcher_foreground" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btnCapturePhoto"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📷 Capture Photo" />
-
-                </LinearLayout>
-
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- Visitor Details Form -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilName"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Visitor Name">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etName"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilPhone"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textPersonName" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginBottom="16dp"
+                    app:hintEnabled="false"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="0dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPhone"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:hint="Mobile Number"
+                        android:inputType="phone"
+                        android:maxLength="10"
+                        android:textColor="@color/dark_brown"
+                        android:textColorHint="@color/soft_brown"
+                        android:textSize="15sp"
+                        android:background="@drawable/bg_search_cream"
+                        android:paddingHorizontal="24dp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPhone"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Phone Number">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPhone"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilFlatNo"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="phone"
-                    android:maxLength="10" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginBottom="16dp"
+                    app:hintEnabled="false"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="0dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etFlatNo"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:hint="Unit / Flat No"
+                        android:inputType="textCapCharacters"
+                        android:textColor="@color/dark_brown"
+                        android:textColorHint="@color/soft_brown"
+                        android:textSize="15sp"
+                        android:background="@drawable/bg_search_cream"
+                        android:paddingHorizontal="24dp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilFlatNo"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:hint="Flat Number">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etFlatNo"
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilPurpose"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:inputType="textCapCharacters" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_marginBottom="8dp"
+                    app:hintEnabled="false"
+                    app:boxStrokeWidth="0dp"
+                    app:boxStrokeWidthFocused="0dp">
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etPurpose"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:hint="Purpose of Visit"
+                        android:inputType="text"
+                        android:textColor="@color/dark_brown"
+                        android:textColorHint="@color/soft_brown"
+                        android:textSize="15sp"
+                        android:background="@drawable/bg_search_cream"
+                        android:paddingHorizontal="24dp" />
+                </com.google.android.material.textfield.TextInputLayout>
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/tilPurpose"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:hint="Purpose of Visit">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etPurpose"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSubmit"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="text" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:layout_height="56dp"
+                    android:layout_marginTop="40dp"
+                    android:text="SUBMIT ENTRY"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    app:backgroundTint="@color/primary"
+                    app:cornerRadius="28dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnSubmit"
-                android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:text="SUBMIT ENTRY"
-                android:textSize="16sp"
-                app:cornerRadius="8dp"
-                android:backgroundTint="@color/primary_green"/>
-
-        </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
     </androidx.core.widget.NestedScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

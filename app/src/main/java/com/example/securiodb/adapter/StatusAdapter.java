@@ -4,6 +4,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -23,15 +24,20 @@ import java.util.Map;
 public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.ViewHolder> {
 
     private List<Map<String, Object>> entries;
-    private OnExitClickListener exitClickListener;
+    private OnEntryActionListener listener;
 
-    public interface OnExitClickListener {
+    public interface OnEntryActionListener {
         void onExitClick(String docId);
+        void onDeleteClick(String docId);
     }
 
-    public StatusAdapter(List<Map<String, Object>> entries, OnExitClickListener listener) {
+    // Retaining legacy interface for backward compatibility if needed, 
+    // but moving to OnEntryActionListener
+    public interface OnExitClickListener extends OnEntryActionListener {}
+
+    public StatusAdapter(List<Map<String, Object>> entries, OnEntryActionListener listener) {
         this.entries = entries;
-        this.exitClickListener = listener;
+        this.listener = listener;
     }
 
     public void updateList(List<Map<String, Object>> newList) {
@@ -52,18 +58,31 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.ViewHolder
         String docId = (String) entry.get("id");
         String name = (String) entry.get("name");
         String flat = (String) entry.get("flatNumber");
+        if (flat == null) flat = (String) entry.get("flatNo");
+        
         String purpose = (String) entry.get("purpose");
         String status = (String) entry.get("status");
-        String photoUrl = (String) entry.get("photoUrl");
+        
+        String photoUrl = (String) entry.get("imageUrl");
+        if (photoUrl == null || photoUrl.isEmpty()) {
+            photoUrl = (String) entry.get("photoUrl");
+        }
+        
         Object timestamp = entry.get("timestamp");
+        Object entryTime = entry.get("entryTime");
         Object exitTime = entry.get("exitTime");
 
         holder.tvName.setText(name);
-        holder.tvFlat.setText("Flat: " + flat);
+        holder.tvFlat.setText("Flat: " + (flat != null ? flat : "---"));
         holder.tvPurpose.setText("Purpose: " + purpose);
         
-        if (timestamp instanceof com.google.firebase.Timestamp) {
-            Date date = ((com.google.firebase.Timestamp) timestamp).toDate();
+        Object timeToDisplay = entryTime != null ? entryTime : timestamp;
+        if (timeToDisplay instanceof com.google.firebase.Timestamp) {
+            Date date = ((com.google.firebase.Timestamp) timeToDisplay).toDate();
+            SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+            holder.tvTime.setText("Entry: " + sdf.format(date));
+        } else if (timeToDisplay instanceof Long) {
+            Date date = new Date((Long) timeToDisplay);
             SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
             holder.tvTime.setText("Entry: " + sdf.format(date));
         }
@@ -81,6 +100,10 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.ViewHolder
                     Date date = ((com.google.firebase.Timestamp) exitTime).toDate();
                     SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
                     holder.tvTime.append(" | Exit: " + sdf.format(date));
+                } else if (exitTime instanceof Long) {
+                    Date date = new Date((Long) exitTime);
+                    SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
+                    holder.tvTime.append(" | Exit: " + sdf.format(date));
                 }
             }
         } else if ("Rejected".equalsIgnoreCase(status)) {
@@ -91,13 +114,23 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.ViewHolder
             holder.btnExit.setVisibility(View.GONE);
         }
 
-        Glide.with(holder.itemView.getContext())
-                .load(photoUrl)
-                .placeholder(android.R.drawable.ic_menu_camera)
-                .into(holder.ivPhoto);
+        if (photoUrl != null && !photoUrl.isEmpty()) {
+            Glide.with(holder.itemView.getContext())
+                    .load(photoUrl)
+                    .placeholder(android.R.drawable.ic_menu_camera)
+                    .error(android.R.drawable.ic_menu_camera)
+                    .centerCrop()
+                    .into(holder.ivPhoto);
+        } else {
+            holder.ivPhoto.setImageResource(android.R.drawable.ic_menu_camera);
+        }
 
         holder.btnExit.setOnClickListener(v -> {
-            if (exitClickListener != null) exitClickListener.onExitClick(docId);
+            if (listener != null) listener.onExitClick(docId);
+        });
+
+        holder.btnDelete.setOnClickListener(v -> {
+            if (listener != null) listener.onDeleteClick(docId);
         });
     }
 
@@ -110,6 +143,7 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.ViewHolder
         ShapeableImageView ivPhoto;
         TextView tvName, tvFlat, tvPurpose, tvTime, tvStatus;
         Button btnExit;
+        ImageButton btnDelete;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -120,6 +154,7 @@ public class StatusAdapter extends RecyclerView.Adapter<StatusAdapter.ViewHolder
             tvTime = itemView.findViewById(R.id.tvTimeInfo);
             tvStatus = itemView.findViewById(R.id.tvStatusBadge);
             btnExit = itemView.findViewById(R.id.btnMarkExit);
+            btnDelete = itemView.findViewById(R.id.btnDeleteEntry);
         }
     }
 }

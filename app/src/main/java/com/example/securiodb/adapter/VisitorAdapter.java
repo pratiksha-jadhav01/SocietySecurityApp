@@ -1,160 +1,163 @@
 package com.example.securiodb.adapter;
 
-import android.content.res.ColorStateList;
+import android.content.Context;
 import android.graphics.Color;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.LinearLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.securiodb.R;
-import com.example.securiodb.models.Visitor;
-import com.google.android.material.chip.Chip;
-import com.google.android.material.imageview.ShapeableImageView;
+import com.example.securiodb.models.VisitorModel;
+import com.google.firebase.Timestamp;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
 
-public class VisitorAdapter extends RecyclerView.Adapter<VisitorAdapter.VisitorViewHolder> {
+public class VisitorAdapter extends RecyclerView.Adapter<VisitorAdapter.ViewHolder> {
 
-    private List<Visitor> visitorList;
-    private boolean isOwnerView;
-    private boolean isAdminView;
-    private OnVisitorActionListener listener;
+    private List<VisitorModel> list;
+    private Context context;
+    private OnItemClickListener listener;
+    private boolean isMini = false;
 
-    public interface OnVisitorActionListener {
-        void onApprove(Visitor visitor);
-        void onReject(Visitor visitor);
-        void onOverride(Visitor visitor);
+    public interface OnItemClickListener {
+        void onApprove(String docId, int position);
+        void onReject(String docId, int position);
     }
 
-    public VisitorAdapter(List<Visitor> visitorList) {
-        this.visitorList = visitorList;
-    }
-
-    public VisitorAdapter(List<Visitor> visitorList, boolean isOwnerView, OnVisitorActionListener listener) {
-        this.visitorList = visitorList;
-        this.isOwnerView = isOwnerView;
+    public VisitorAdapter(Context ctx, List<VisitorModel> list, OnItemClickListener listener) {
+        this.context  = ctx;
+        this.list     = list;
         this.listener = listener;
     }
 
-    public void setAdminView(boolean isAdminView) {
-        this.isAdminView = isAdminView;
+    public VisitorAdapter(Context ctx, List<VisitorModel> list, boolean isMini, OnItemClickListener listener) {
+        this.context  = ctx;
+        this.list     = list;
+        this.isMini   = isMini;
+        this.listener = listener;
     }
 
     @NonNull
     @Override
-    public VisitorViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_visitor, parent, false);
-        return new VisitorViewHolder(view);
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        int layoutRes = isMini ? R.layout.item_visitor_request_mini : R.layout.item_visitor;
+        View v = LayoutInflater.from(context).inflate(layoutRes, parent, false);
+        return new ViewHolder(v);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull VisitorViewHolder holder, int position) {
-        Visitor visitor = visitorList.get(position);
+    public void onBindViewHolder(@NonNull ViewHolder h, int pos) {
+        VisitorModel v = list.get(pos);
 
-        // Basic Info
-        holder.tvName.setText(visitor.getName());
-        holder.tvFlat.setText("Flat: " + visitor.getFlatNumber());
+        if (h.tvName != null) h.tvName.setText(v.getName());
+        if (h.tvPurpose != null) h.tvPurpose.setText("Purpose: " + v.getPurpose());
         
-        // Purpose Chip
-        if (holder.chipPurpose != null) {
-            holder.chipPurpose.setText(visitor.getPurpose());
-            if ("Delivery".equalsIgnoreCase(visitor.getPurpose())) {
-                holder.chipPurpose.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#FFF3E0")));
-            } else {
-                holder.chipPurpose.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor("#E3F2FD")));
-            }
+        if (h.tvFlat != null) {
+            h.tvFlat.setText("Flat: " + v.getFlat());
         }
 
-        // Time Formatting
-        if (visitor.getTimestamp() != null) {
+        if (h.tvTime != null) {
             SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a", Locale.getDefault());
-            if (holder.tvTime != null) {
-                holder.tvTime.setText(sdf.format(visitor.getTimestamp().toDate()));
-            } else if (holder.chipTime != null) {
-                holder.chipTime.setText(sdf.format(visitor.getTimestamp().toDate()));
+            Timestamp entryTime = v.getEntryTime();
+            if (entryTime != null) {
+                h.tvTime.setText(sdf.format(entryTime.toDate()));
+            } else {
+                h.tvTime.setText("--:--");
             }
         }
 
-        // Photo loading with Glide
-        Glide.with(holder.itemView.getContext())
-                .load(visitor.getPhotoUrl())
-                .placeholder(android.R.drawable.ic_menu_report_image)
-                .error(android.R.drawable.ic_menu_gallery)
-                .into(holder.ivPhoto);
-
-        // Status and Actions Logic
-        if ("Pending".equalsIgnoreCase(visitor.getStatus())) {
-            if (isOwnerView || isAdminView) {
-                holder.layoutActions.setVisibility(View.VISIBLE);
-                holder.tvStatusBadge.setVisibility(View.GONE);
-                if (isAdminView) {
-                    holder.btnApprove.setText("OVERRIDE");
-                    holder.btnApprove.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#7B1FA2")));
+        String status = v.getStatus();
+        if (h.tvStatus != null) {
+            h.tvStatus.setText(status != null ? status : "Pending");
+            try {
+                switch (status != null ? status : "Pending") {
+                    case "Approved":
+                        h.tvStatus.setBackgroundResource(R.drawable.badge_approved);
+                        h.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.status_approved_text));
+                        break;
+                    case "Rejected":
+                        h.tvStatus.setBackgroundResource(R.drawable.badge_rejected);
+                        h.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.status_rejected_text));
+                        break;
+                    default: // Pending
+                        h.tvStatus.setBackgroundResource(R.drawable.badge_pending);
+                        h.tvStatus.setTextColor(ContextCompat.getColor(context, R.color.primary));
                 }
+            } catch (Exception ignored) {}
+        }
+
+        // Action visibility logic
+        if ("Pending".equalsIgnoreCase(status) && listener != null && h.layoutActions != null) {
+            h.layoutActions.setVisibility(View.VISIBLE);
+        } else if (h.layoutActions != null) {
+            h.layoutActions.setVisibility(View.GONE);
+        }
+
+        // Photo loading using the unified ID ivVisitorPhoto
+        if (h.ivVisitorPhoto != null) {
+            String imgUrl = v.getImageUrl();
+            if (imgUrl != null && !imgUrl.isEmpty()) {
+                Glide.with(context)
+                        .load(imgUrl)
+                        .placeholder(android.R.drawable.ic_menu_gallery)
+                        .error(android.R.drawable.ic_menu_gallery)
+                        .centerCrop()
+                        .into(h.ivVisitorPhoto);
             } else {
-                holder.layoutActions.setVisibility(View.GONE);
-                holder.tvStatusBadge.setVisibility(View.VISIBLE);
-                holder.tvStatusBadge.setText("PENDING");
-                holder.tvStatusBadge.setBackgroundColor(Color.parseColor("#FBC02D"));
-            }
-        } else {
-            holder.layoutActions.setVisibility(View.GONE);
-            holder.tvStatusBadge.setVisibility(View.VISIBLE);
-            holder.tvStatusBadge.setText(visitor.getStatus().toUpperCase());
-            
-            if ("Approved".equalsIgnoreCase(visitor.getStatus())) {
-                holder.tvStatusBadge.setBackgroundColor(Color.parseColor("#2E7D32"));
-            } else {
-                holder.tvStatusBadge.setBackgroundColor(Color.parseColor("#C62828"));
+                h.ivVisitorPhoto.setImageResource(android.R.drawable.ic_menu_gallery);
             }
         }
 
-        // Action Listeners
-        holder.btnApprove.setOnClickListener(v -> {
-            if (listener != null) {
-                if (isAdminView) listener.onOverride(visitor);
-                else listener.onApprove(visitor);
-            }
-        });
-
-        holder.btnReject.setOnClickListener(v -> {
-            if (listener != null) listener.onReject(visitor);
-        });
+        // Button clicks
+        if (h.btnApprove != null) {
+            h.btnApprove.setOnClickListener(view -> {
+                if (listener != null) listener.onApprove(v.getDocId(), pos);
+            });
+        }
+        if (h.btnReject != null) {
+            h.btnReject.setOnClickListener(view -> {
+                if (listener != null) listener.onReject(v.getDocId(), pos);
+            });
+        }
     }
 
     @Override
     public int getItemCount() {
-        return visitorList.size();
+        return list != null ? list.size() : 0;
     }
 
-    static class VisitorViewHolder extends RecyclerView.ViewHolder {
-        ShapeableImageView ivPhoto;
-        TextView tvName, tvFlat, tvTime, tvStatusBadge;
-        Chip chipPurpose, chipTime;
-        LinearLayout layoutActions;
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        ImageView ivVisitorPhoto;
+        TextView tvName, tvFlat, tvPurpose, tvStatus, tvTime;
+        View layoutActions;
         Button btnApprove, btnReject;
 
-        public VisitorViewHolder(@NonNull View itemView) {
-            super(itemView);
-            ivPhoto = itemView.findViewById(R.id.ivVisitor);
-            tvName = itemView.findViewById(R.id.tvVisitorName);
-            tvFlat = itemView.findViewById(R.id.tvFlatNumber);
-            tvTime = itemView.findViewById(R.id.tvTime);
-            chipTime = itemView.findViewById(R.id.chipTime);
-            tvStatusBadge = itemView.findViewById(R.id.tvStatusBadge);
-            chipPurpose = itemView.findViewById(R.id.chipPurpose);
-            layoutActions = itemView.findViewById(R.id.layoutActions);
-            btnApprove = itemView.findViewById(R.id.btnApprove);
-            btnReject = itemView.findViewById(R.id.btnReject);
+        ViewHolder(View v) {
+            super(v);
+            tvName         = v.findViewById(R.id.tvVisitorName);
+            tvPurpose      = v.findViewById(R.id.tvPurpose);
+            tvTime         = v.findViewById(R.id.tvTime);
+            btnApprove     = v.findViewById(R.id.btnApprove);
+            btnReject      = v.findViewById(R.id.btnReject);
+            ivVisitorPhoto = v.findViewById(R.id.ivVisitorPhoto);
+            tvFlat         = v.findViewById(R.id.tvFlat);
+            tvStatus       = v.findViewById(R.id.tvStatus);
+            layoutActions  = v.findViewById(R.id.layoutActions);
+            
+            // Fallback for layoutActions if not explicitly found
+            if (layoutActions == null && btnApprove != null) {
+                layoutActions = (View) btnApprove.getParent();
+            }
         }
     }
 }

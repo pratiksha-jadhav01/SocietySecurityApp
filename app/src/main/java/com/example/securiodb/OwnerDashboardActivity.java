@@ -1,53 +1,58 @@
 package com.example.securiodb;
 
+import android.Manifest;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.util.Log;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.fragment.app.Fragment;
 
-import com.example.securiodb.adapter.VisitorAdapter;
-import com.example.securiodb.models.Visitor;
+import com.example.securiodb.ui.ApprovalsFragment;
+import com.example.securiodb.ui.DailyHelperFragment;
+import com.example.securiodb.ui.HomeDashboardFragment;
 import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
-import com.google.firebase.firestore.Query;
-
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.List;
 
 public class OwnerDashboardActivity extends AppCompatActivity {
 
-    private TextView tvFlatHeader, tvOwnerNameHeader, tvStatVisitorsToday, tvStatDeliveriesToday, tvStatPendingCount;
-    private MaterialCardView cardPendingStats;
-    private RecyclerView rvPendingPreview;
     private BottomNavigationView bottomNav;
-    private View btnSeeAll;
-    private MaterialCardView btnLiveStatus, btnHistory, btnDeliveries, btnContactGuard;
-
     private FirebaseFirestore db;
-    private FirebaseAuth mAuth;
-    private String ownerUid, flatNumber;
-    
-    private List<Visitor> pendingPreviewList = new ArrayList<>();
-    private VisitorAdapter adapter;
-    private ListenerRegistration statsListener, pendingListener;
+    private String ownerFlat;
+    private ListenerRegistration pendingListener;
+
+    // Realtime Database for Notifications
+    private DatabaseReference mDatabase;
+    private ChildEventListener mChildEventListener;
+    private boolean isInitialLoad = true;
+
+    // Permission Launcher for Android 13+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    Log.d("NotificationPermission", "Granted");
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,143 +60,182 @@ public class OwnerDashboardActivity extends AppCompatActivity {
         setContentView(R.layout.activity_owner_dashboard);
 
         db = FirebaseFirestore.getInstance();
-        mAuth = FirebaseAuth.getInstance();
-        if (mAuth.getCurrentUser() == null) {
-            finish();
-            return;
-        }
-        ownerUid = mAuth.getCurrentUser().getUid();
-
-        initViews();
-        fetchOwnerData();
-        setupBottomNav();
-    }
-
-    private void initViews() {
-        tvFlatHeader = findViewById(R.id.tvFlatHeader);
-        tvOwnerNameHeader = findViewById(R.id.tvOwnerNameHeader);
-        tvStatVisitorsToday = findViewById(R.id.tvStatVisitorsToday);
-        tvStatDeliveriesToday = findViewById(R.id.tvStatDeliveriesToday);
-        tvStatPendingCount = findViewById(R.id.tvStatPendingRequests);
-        cardPendingStats = findViewById(R.id.cardPendingStats);
-        rvPendingPreview = findViewById(R.id.rvPendingPreview);
-        bottomNav = findViewById(R.id.bottomNav);
-        btnSeeAll = findViewById(R.id.btnSeeAll);
+        String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         
-        btnLiveStatus = findViewById(R.id.btnLiveStatus);
-        btnHistory = findViewById(R.id.btnHistory);
-        btnDeliveries = findViewById(R.id.btnDeliveries);
-        btnContactGuard = findViewById(R.id.btnContactGuard);
+        checkNotificationPermission();
 
-        rvPendingPreview.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new VisitorAdapter(pendingPreviewList);
-        rvPendingPreview.setAdapter(adapter);
-    }
+        bottomNav = findViewById(R.id.bottomNav);
+        setupBottomNav();
 
-    private void fetchOwnerData() {
-        FirebaseDatabase.getInstance().getReference("users").child(ownerUid)
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        flatNumber = snapshot.child("flatNumber").getValue(String.class);
-                        String name = snapshot.child("name").getValue(String.class);
-                        
-                        tvFlatHeader.setText("Flat " + flatNumber + " 🏠");
-                        tvOwnerNameHeader.setText(name);
-                        
-                        if (flatNumber != null) {
-                            startStatsListeners();
-                            startPendingPreviewListener();
-                        }
+        // Fetch owner flat number
+        db.collection("users").document(uid).get()
+            .addOnSuccessListener(doc -> {
+                if (doc.exists()) {
+                    ownerFlat = doc.getString("flatNumber");
+                    if (ownerFlat == null) ownerFlat = doc.getString("flatNo");
+                    
+                    if (ownerFlat != null && !ownerFlat.isEmpty()) {
+                        startRealTimeVisitorListener();
+                        startPendingBadgeListener();
                     }
                 }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {
-                    Toast.makeText(OwnerDashboardActivity.this, "Error loading profile", Toast.LENGTH_SHORT).show();
+                
+                if (savedInstanceState == null) {
+                    loadFragment(new HomeDashboardFragment());
+                    bottomNav.setSelectedItemId(R.id.navHome);
+                }
+            })
+            .addOnFailureListener(e -> {
+                if (savedInstanceState == null) {
+                    loadFragment(new HomeDashboardFragment());
+                    bottomNav.setSelectedItemId(R.id.navHome);
                 }
             });
     }
 
-    private void startStatsListeners() {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        Date startOfDay = cal.getTime();
-
-        statsListener = db.collection("visitors")
-                .whereEqualTo("flatNumber", flatNumber)
-                .whereGreaterThanOrEqualTo("timestamp", startOfDay)
-                .addSnapshotListener((value, error) -> {
-                    if (error != null || value == null) return;
-                    int visitors = 0, deliveries = 0;
-                    for (DocumentSnapshot doc : value.getDocuments()) {
-                        String purpose = doc.getString("purpose");
-                        if ("Visitor".equalsIgnoreCase(purpose)) visitors++;
-                        else if ("Delivery".equalsIgnoreCase(purpose)) deliveries++;
-                    }
-                    tvStatVisitorsToday.setText(String.valueOf(visitors));
-                    tvStatDeliveriesToday.setText(String.valueOf(deliveries));
-                });
+    private void checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
+            }
+        }
     }
 
-    private void startPendingPreviewListener() {
-        pendingListener = db.collection("visitors")
-                .whereEqualTo("flatNumber", flatNumber)
-                .whereEqualTo("status", "Pending")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .addSnapshotListener((value, error) -> {
-                    if (error != null || value == null) return;
-                    
-                    int count = value.size();
-                    tvStatPendingCount.setText(String.valueOf(count));
-                    
-                    if (count > 0) {
-                        cardPendingStats.setCardBackgroundColor(ContextCompat.getColor(this, R.color.amber_pending));
-                        BadgeDrawable badge = bottomNav.getOrCreateBadge(R.id.nav_requests);
-                        badge.setNumber(count);
-                        badge.setVisible(true);
-                    } else {
-                        cardPendingStats.setCardBackgroundColor(ContextCompat.getColor(this, R.color.primary_light_green));
-                        bottomNav.removeBadge(R.id.nav_requests);
-                    }
+    private void startRealTimeVisitorListener() {
+        if (ownerFlat == null) return;
 
-                    pendingPreviewList.clear();
-                    List<DocumentSnapshot> docs = value.getDocuments();
-                    for (int i = 0; i < Math.min(docs.size(), 3); i++) {
-                        pendingPreviewList.add(docs.get(i).toObject(Visitor.class));
-                    }
-                    adapter.notifyDataSetChanged();
-                });
+        mDatabase = FirebaseDatabase.getInstance().getReference("visitors");
+
+        // First, fetch existing count to know when new data arrives
+        mDatabase.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot snapshot) {
+                isInitialLoad = false;
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        });
+        
+        mChildEventListener = new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                if (isInitialLoad) return; // Skip existing data
+
+                String vFlat = snapshot.child("flatNumber").getValue(String.class);
+                if (vFlat == null) vFlat = snapshot.child("flatNo").getValue(String.class);
+
+                if (ownerFlat.equalsIgnoreCase(vFlat)) {
+                    String name = snapshot.child("name").getValue(String.class);
+                    String purpose = snapshot.child("purpose").getValue(String.class);
+                    
+                    String msg = (name != null ? name : "Visitor") + " arrived at the gate";
+                    if (purpose != null) msg += " for " + purpose;
+                    
+                    showNotification("New Visitor Arrival", msg);
+                }
+            }
+
+            @Override public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {}
+            @Override public void onChildRemoved(@NonNull DataSnapshot snapshot) {}
+            @Override public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {}
+            @Override public void onCancelled(@NonNull DatabaseError error) {}
+        };
+
+        mDatabase.addChildEventListener(mChildEventListener);
+    }
+
+    private void showNotification(String title, String message) {
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        String channelId = "visitor_notifications";
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    channelId, "Visitor Alerts", NotificationManager.IMPORTANCE_HIGH);
+            channel.enableVibration(true);
+            channel.setVibrationPattern(new long[]{0, 500, 250, 500});
+            if (notificationManager != null) {
+                notificationManager.createNotificationChannel(channel);
+            }
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.mipmap.secu_ground)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setAutoCancel(true);
+
+        if (notificationManager != null) {
+            notificationManager.notify((int) System.currentTimeMillis(), builder.build());
+        }
     }
 
     private void setupBottomNav() {
-        bottomNav.setSelectedItemId(R.id.nav_dashboard);
         bottomNav.setOnItemSelectedListener(item -> {
+            Fragment fragment = null;
             int id = item.getItemId();
-            if (id == R.id.nav_requests) {
-                startActivity(new Intent(this, ApprovalsActivity.class));
-            } else if (id == R.id.nav_history) {
-                startActivity(new Intent(this, VisitorHistoryActivity.class));
-            } else if (id == R.id.nav_profile) {
-                startActivity(new Intent(this, OwnerProfileActivity.class));
+            if (id == R.id.navHome) fragment = new HomeDashboardFragment();
+            else if (id == R.id.navRequests) {
+                fragment = new ApprovalsFragment();
+                Bundle b = new Bundle();
+                b.putString("flatNo", ownerFlat);
+                b.putString("purpose", "Visitor");
+                fragment.setArguments(b);
             }
-            return true;
+            else if (id == R.id.navHistory) {
+                startActivity(new Intent(this, VisitorHistoryActivity.class));
+                return false; 
+            } else if (id == R.id.navHelpers) fragment = new DailyHelperFragment();
+            else if (id == R.id.navProfile) {
+                startActivity(new Intent(this, OwnerProfileActivity.class));
+                return false;
+            }
+            if (fragment != null) {
+                loadFragment(fragment);
+                return true;
+            }
+            return false;
         });
-
-        btnSeeAll.setOnClickListener(v -> startActivity(new Intent(this, ApprovalsActivity.class)));
-        btnLiveStatus.setOnClickListener(v -> startActivity(new Intent(this, LiveVisitorsActivity.class)));
-        btnHistory.setOnClickListener(v -> startActivity(new Intent(this, VisitorHistoryActivity.class)));
-        btnDeliveries.setOnClickListener(v -> startActivity(new Intent(this, DeliveryManagementActivity.class)));
-        btnContactGuard.setOnClickListener(v -> startActivity(new Intent(this, ContactGuardActivity.class)));
     }
 
-    @Override
+    public void loadFragment(Fragment fragment) {
+        if (fragment.getArguments() == null) {
+            Bundle args = new Bundle();
+            args.putString("flatNo", ownerFlat != null ? ownerFlat : "");
+            fragment.setArguments(args);
+        }
+        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentContainer, fragment).commit();
+    }
+
+    private void startPendingBadgeListener() {
+        if (ownerFlat == null || ownerFlat.isEmpty()) return;
+        if (pendingListener != null) pendingListener.remove();
+        
+        // Badge tracks pending visitor requests
+        pendingListener = db.collection("visitors")
+            .whereEqualTo("flatNumber", ownerFlat)
+            .whereEqualTo("status", "Pending")
+            .addSnapshotListener((snap, e) -> {
+                if (snap == null || isFinishing()) return;
+                int count = snap.size();
+                BadgeDrawable badge = bottomNav.getOrCreateBadge(R.id.navRequests);
+                if (count > 0) {
+                    badge.setVisible(true);
+                    badge.setNumber(count);
+                    badge.setBackgroundColor(ContextCompat.getColor(this, R.color.badge_red));
+                } else {
+                    badge.setVisible(false);
+                }
+            });
+    }
+
+    @Override 
     protected void onDestroy() {
         super.onDestroy();
-        if (statsListener != null) statsListener.remove();
         if (pendingListener != null) pendingListener.remove();
+        if (mDatabase != null && mChildEventListener != null) {
+            mDatabase.removeEventListener(mChildEventListener);
+        }
     }
 }

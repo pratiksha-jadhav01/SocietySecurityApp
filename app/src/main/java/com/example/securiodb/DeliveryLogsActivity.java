@@ -3,13 +3,14 @@ package com.example.securiodb;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.securiodb.adapter.VisitorAdapter;
-import com.example.securiodb.models.Visitor;
+import com.example.securiodb.models.VisitorModel;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -27,7 +28,7 @@ public class DeliveryLogsActivity extends AppCompatActivity {
     
     private FirebaseFirestore db;
     private VisitorAdapter adapter;
-    private List<Visitor> deliveryList = new ArrayList<>();
+    private List<VisitorModel> deliveryList = new ArrayList<>();
     private ListenerRegistration deliveryListener;
 
     @Override
@@ -54,7 +55,18 @@ public class DeliveryLogsActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         rvDeliveries.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new VisitorAdapter(deliveryList);
+        // Using the correct constructor for com.example.securiodb.adapter.VisitorAdapter
+        adapter = new VisitorAdapter(this, deliveryList, new VisitorAdapter.OnItemClickListener() {
+            @Override
+            public void onApprove(String docId, int position) {
+                updateStatus(docId, "Approved");
+            }
+
+            @Override
+            public void onReject(String docId, int position) {
+                updateStatus(docId, "Rejected");
+            }
+        });
         rvDeliveries.setAdapter(adapter);
     }
 
@@ -62,7 +74,7 @@ public class DeliveryLogsActivity extends AppCompatActivity {
         chipGroupFilter.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.chipToday) loadDeliveries("today");
             else if (checkedId == R.id.chipPending) loadDeliveries("Pending");
-            else if (checkedId == R.id.chipDelivered) loadDeliveries("Approved"); // Using Approved as Delivered for now
+            else if (checkedId == R.id.chipDelivered) loadDeliveries("Approved");
             else loadDeliveries("all");
         });
     }
@@ -89,10 +101,19 @@ public class DeliveryLogsActivity extends AppCompatActivity {
             progressBar.setVisibility(View.GONE);
             if (value != null) {
                 deliveryList.clear();
-                deliveryList.addAll(value.toObjects(Visitor.class));
+                deliveryList.addAll(value.toObjects(VisitorModel.class));
+                // Manually set docId from document snapshot
+                for (int i = 0; i < value.getDocuments().size(); i++) {
+                    deliveryList.get(i).setDocId(value.getDocuments().get(i).getId());
+                }
                 adapter.notifyDataSetChanged();
             }
         });
+    }
+
+    private void updateStatus(String docId, String status) {
+        db.collection("visitors").document(docId).update("status", status)
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Status updated to " + status, Toast.LENGTH_SHORT).show());
     }
 
     @Override

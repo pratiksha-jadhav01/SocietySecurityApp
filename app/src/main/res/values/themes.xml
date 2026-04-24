@@ -2,15 +2,21 @@
     <!-- Base application theme. -->
     <style name="Theme.Securiodb" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <!-- Primary brand color. -->
-        <item name="colorPrimary">#1565C0</item>
-        <item name="colorPrimaryVariant">#0D47A1</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_dark</item>
         <item name="colorOnPrimary">@color/white</item>
         <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_700</item>
+        <item name="colorSecondary">@color/soft_brown</item>
+        <item name="colorSecondaryVariant">@color/soft_brown</item>
         <item name="colorOnSecondary">@color/black</item>
+
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="android:statusBarColor">@color/cream_header</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Background color -->
+        <item name="android:windowBackground">@color/body_bg</item>
+
         <!-- Customize your theme here. -->
     </style>
 </resources>

@@ -13,12 +13,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.securiodb.models.Visitor;
-import com.google.android.material.chip.Chip;
-import com.google.firebase.Timestamp;
 
-import java.text.SimpleDateFormat;
 import java.util.List;
-import java.util.Locale;
 
 public class VisitorAdapter extends RecyclerView.Adapter<VisitorAdapter.VisitorViewHolder> {
 
@@ -48,60 +44,86 @@ public class VisitorAdapter extends RecyclerView.Adapter<VisitorAdapter.VisitorV
     @Override
     public void onBindViewHolder(@NonNull VisitorViewHolder holder, int position) {
         Visitor visitor = visitorList.get(position);
-        holder.tvName.setText(visitor.getName());
-        holder.chipPurpose.setText(visitor.getPurpose());
-        holder.tvFlat.setText("Flat: " + visitor.getFlatNumber());
-        holder.tvStatusBadge.setText(visitor.getStatus());
-        holder.tvStatusBadge.setVisibility(View.VISIBLE);
+        
+        if (holder.tvName != null) {
+            holder.tvName.setText(visitor.getName());
+        }
+        
+        if (holder.tvPurpose != null) {
+            holder.tvPurpose.setText("Purpose: " + visitor.getPurpose());
+        }
+        
+        if (holder.tvFlat != null) {
+            holder.tvFlat.setText("Flat: " + visitor.getFlatNumber());
+        }
+        
+        if (holder.tvStatus != null) {
+            holder.tvStatus.setText(visitor.getStatus());
+        }
 
-        Glide.with(holder.itemView.getContext())
-                .load(visitor.getPhotoUrl())
-                .placeholder(android.R.drawable.ic_menu_report_image)
-                .into(holder.ivPhoto);
+        if (holder.ivVisitorPhoto != null) {
+            Glide.with(holder.itemView.getContext())
+                    .load(visitor.getPhotoUrl())
+                    .placeholder(android.R.drawable.ic_menu_gallery)
+                    .error(android.R.drawable.ic_menu_gallery)
+                    .circleCrop()
+                    .into(holder.ivVisitorPhoto);
+        }
 
         // UI Logic based on role and status
-        if ("owner".equals(userRole) && "Pending".equals(visitor.getStatus())) {
-            holder.layoutActions.setVisibility(View.VISIBLE);
-        } else {
-            holder.layoutActions.setVisibility(View.GONE);
+        if (holder.layoutActions != null) {
+            if ("owner".equals(userRole) && "Pending".equals(visitor.getStatus())) {
+                holder.layoutActions.setVisibility(View.VISIBLE);
+            } else {
+                holder.layoutActions.setVisibility(View.GONE);
+            }
         }
 
-        if ("guard".equals(userRole) && "Approved".equals(visitor.getStatus()) && visitor.getExitTime() == null) {
-            holder.btnMarkExit.setVisibility(View.VISIBLE);
-        } else {
-            holder.btnMarkExit.setVisibility(View.GONE);
+        if (holder.btnMarkExit != null) {
+            if ("guard".equals(userRole) && "Approved".equals(visitor.getStatus()) && visitor.getExitTime() == null) {
+                holder.btnMarkExit.setVisibility(View.VISIBLE);
+            } else {
+                holder.btnMarkExit.setVisibility(View.GONE);
+            }
         }
 
-        holder.btnApprove.setOnClickListener(v -> {
-            if (listener != null) listener.onApprove(visitor);
-        });
-        holder.btnReject.setOnClickListener(v -> {
-            if (listener != null) listener.onReject(visitor);
-        });
-        holder.btnMarkExit.setOnClickListener(v -> {
-            if (listener != null) listener.onMarkExit(visitor);
-        });
+        if (holder.btnApprove != null) {
+            holder.btnApprove.setOnClickListener(v -> {
+                if (listener != null) listener.onApprove(visitor);
+            });
+        }
+        if (holder.btnReject != null) {
+            holder.btnReject.setOnClickListener(v -> {
+                if (listener != null) listener.onReject(visitor);
+            });
+        }
+        if (holder.btnMarkExit != null) {
+            holder.btnMarkExit.setOnClickListener(v -> {
+                if (listener != null) listener.onMarkExit(visitor);
+            });
+        }
     }
 
     @Override
     public int getItemCount() {
-        return visitorList.size();
+        return visitorList != null ? visitorList.size() : 0;
     }
 
     public static class VisitorViewHolder extends RecyclerView.ViewHolder {
-        ImageView ivPhoto;
-        TextView tvName, tvFlat, tvStatusBadge;
-        Chip chipPurpose;
+        ImageView ivVisitorPhoto;
+        TextView tvName, tvFlat, tvPurpose, tvStatus, tvTime;
         LinearLayout layoutActions;
         Button btnApprove, btnReject, btnMarkExit;
 
         public VisitorViewHolder(@NonNull View itemView) {
             super(itemView);
-            ivPhoto = itemView.findViewById(R.id.ivVisitor);
+            ivVisitorPhoto = itemView.findViewById(R.id.ivVisitorPhoto);
             tvName = itemView.findViewById(R.id.tvVisitorName);
-            chipPurpose = itemView.findViewById(R.id.chipPurpose);
-            tvFlat = itemView.findViewById(R.id.tvFlatNumber);
-            tvStatusBadge = itemView.findViewById(R.id.tvStatusBadge);
+            tvFlat = itemView.findViewById(R.id.tvFlat);
+            tvPurpose = itemView.findViewById(R.id.tvPurpose);
+            tvStatus = itemView.findViewById(R.id.tvStatus);
+            tvTime = itemView.findViewById(R.id.tvTime);
+
             layoutActions = itemView.findViewById(R.id.layoutActions);
             btnApprove = itemView.findViewById(R.id.btnApprove);
             btnReject = itemView.findViewById(R.id.btnReject);

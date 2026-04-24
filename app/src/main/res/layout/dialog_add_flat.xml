@@ -4,30 +4,38 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="20dp"
+    android:background="@color/body_bg">
 
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/InputField"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Flat Number (e.g. A-101)">
+        android:hint="Flat Number (e.g. A-101)"
+        app:boxStrokeColor="@color/cream_field_stroke"
+        app:hintTextColor="@color/primary">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etFlatNumber"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="textCapCharacters" />
+            android:inputType="textCapCharacters"
+            android:textColor="@color/dark_brown" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        style="@style/InputField"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Floor">
+        android:layout_marginTop="12dp"
+        android:hint="Floor"
+        app:boxStrokeColor="@color/cream_field_stroke"
+        app:hintTextColor="@color/primary">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etFloor"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:inputType="number" />
+            android:inputType="number"
+            android:textColor="@color/dark_brown" />
     </com.google.android.material.textfield.TextInputLayout>
 
 </LinearLayout>

@@ -1,7 +1,6 @@
 package com.example.securiodb;
 
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -10,7 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.securiodb.adapter.VisitorAdapter;
-import com.example.securiodb.models.Visitor;
+import com.example.securiodb.models.VisitorModel;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.DataSnapshot;
@@ -33,7 +32,7 @@ public class DeliveryManagementActivity extends AppCompatActivity {
     
     private FirebaseFirestore db;
     private String flatNumber;
-    private List<Visitor> deliveryList = new ArrayList<>();
+    private List<VisitorModel> deliveryList = new ArrayList<>();
     private VisitorAdapter adapter;
 
     @Override
@@ -46,17 +45,17 @@ public class DeliveryManagementActivity extends AppCompatActivity {
         chipGroupDelivery = findViewById(R.id.chipGroupDelivery);
 
         rvDeliveries.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new VisitorAdapter(deliveryList, true, new VisitorAdapter.OnVisitorActionListener() {
+        // Corrected constructor usage for VisitorAdapter
+        adapter = new VisitorAdapter(this, deliveryList, new VisitorAdapter.OnItemClickListener() {
             @Override
-            public void onApprove(Visitor visitor) {
-                markAsReceived(visitor);
+            public void onApprove(String docId, int position) {
+                markAsReceived(docId);
             }
 
             @Override
-            public void onReject(Visitor visitor) {}
-
-            @Override
-            public void onOverride(Visitor visitor) {}
+            public void onReject(String docId, int position) {
+                // Not implemented for delivery in this context
+            }
         });
         rvDeliveries.setAdapter(adapter);
 
@@ -65,6 +64,8 @@ public class DeliveryManagementActivity extends AppCompatActivity {
     }
 
     private void fetchFlatAndLoadDeliveries() {
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+        
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         FirebaseDatabase.getInstance().getReference("users").child(uid)
             .addListenerForSingleValueEvent(new ValueEventListener() {
@@ -96,27 +97,25 @@ public class DeliveryManagementActivity extends AppCompatActivity {
         } else if (checkedId == R.id.chipDelPending) {
             query = query.whereEqualTo("status", "Pending");
         } else if (checkedId == R.id.chipDelReceived) {
-            // Fix: Show as received if status is Approved AND purpose is Delivery
             query = query.whereEqualTo("status", "Approved");
         }
 
-        query.orderBy("timestamp", Query.Direction.DESCENDING);
-
-        query.get().addOnSuccessListener(value -> {
+        query.orderBy("timestamp", Query.Direction.DESCENDING)
+             .get().addOnSuccessListener(value -> {
             deliveryList.clear();
             for (DocumentSnapshot doc : value.getDocuments()) {
-                Visitor v = doc.toObject(Visitor.class);
+                VisitorModel v = doc.toObject(VisitorModel.class);
                 if (v != null) {
-                    v.setVisitorId(doc.getId());
+                    v.setDocId(doc.getId());
                     deliveryList.add(v);
                 }
             }
             adapter.notifyDataSetChanged();
-        });
+        }).addOnFailureListener(e -> Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
-    private void markAsReceived(Visitor visitor) {
-        db.collection("visitors").document(visitor.getVisitorId())
+    private void markAsReceived(String docId) {
+        db.collection("visitors").document(docId)
                 .update("status", "Approved", "approvedAt", FieldValue.serverTimestamp())
                 .addOnSuccessListener(aVoid -> loadDeliveries());
     }

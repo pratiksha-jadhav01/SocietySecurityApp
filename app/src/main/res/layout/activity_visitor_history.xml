@@ -3,19 +3,22 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_light">
+    android:background="@color/body_bg">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/primary_green">
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
+            app:navigationIcon="@android:drawable/ic_menu_revert"
+            app:navigationIconTint="@color/dark_brown"
             app:title="Visitor History"
-            app:titleTextColor="@color/white" />
+            app:titleTextColor="@color/dark_brown" />
 
         <HorizontalScrollView
             android:layout_width="match_parent"
@@ -32,32 +35,48 @@
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipToday"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Today"
-                    android:checked="true" />
+                    android:checked="true"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipWeek"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="This Week" />
+                    android:text="This Week"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipMonth"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="This Month" />
+                    android:text="This Month"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipAllDates"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="All" />
+                    android:text="All"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
 
@@ -76,25 +95,37 @@
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipAllStatus"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="All Status"
-                    android:checked="true" />
+                    android:checked="true"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipApproved"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Approved" />
+                    android:text="Approved"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chipRejected"
-                    style="@style/Widget.MaterialComponents.Chip.Filter"
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Rejected" />
+                    android:text="Rejected"
+                    app:chipBackgroundColor="@color/light_cream"
+                    android:textColor="@color/primary"
+                    app:chipStrokeColor="@color/border_color"
+                    app:chipStrokeWidth="1dp" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
 
@@ -106,6 +137,7 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         android:padding="8dp"
-        android:clipToPadding="false" />
+        android:clipToPadding="false"
+        android:background="@android:color/transparent" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

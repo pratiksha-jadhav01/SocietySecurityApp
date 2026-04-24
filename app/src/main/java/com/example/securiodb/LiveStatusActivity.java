@@ -54,9 +54,9 @@ public class LiveStatusActivity extends AppCompatActivity implements StatusAdapt
     }
 
     private void setupRealtimeListener() {
-        // Query for everyone currently inside (any guard's entries)
+        // Query for everyone currently inside. 
+        // We now include "Pending" status so they appear immediately when the guard sends the entry.
         registration = db.collection("visitors")
-                .whereEqualTo("status", "Approved")
                 .whereEqualTo("exitTime", null)
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
@@ -70,8 +70,12 @@ public class LiveStatusActivity extends AppCompatActivity implements StatusAdapt
                         for (DocumentSnapshot doc : value.getDocuments()) {
                             Map<String, Object> data = doc.getData();
                             if (data != null) {
-                                data.put("id", doc.getId());
-                                entries.add(data);
+                                String status = (String) data.get("status");
+                                // Show if it's already Approved OR if it's still Pending (just sent)
+                                if ("Approved".equalsIgnoreCase(status) || "Pending".equalsIgnoreCase(status)) {
+                                    data.put("id", doc.getId());
+                                    entries.add(data);
+                                }
                             }
                         }
                         adapter.updateList(entries);
@@ -86,6 +90,14 @@ public class LiveStatusActivity extends AppCompatActivity implements StatusAdapt
         db.collection("visitors").document(docId)
                 .update("exitTime", FieldValue.serverTimestamp())
                 .addOnSuccessListener(aVoid -> Toast.makeText(this, "Exit marked", Toast.LENGTH_SHORT).show());
+    }
+
+    @Override
+    public void onDeleteClick(String docId) {
+        db.collection("visitors").document(docId)
+                .delete()
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Entry deleted", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Error deleting: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     @Override

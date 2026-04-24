@@ -4,48 +4,47 @@ import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.View;
 import android.widget.ProgressBar;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.securiodb.adapter.VisitorAdapter;
 import com.example.securiodb.models.Visitor;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.List;
 
 public class VisitorLogsActivity extends AppCompatActivity {
 
+    private static final String TAG = "VisitorLogsActivity";
     private RecyclerView rvVisitors;
     private ProgressBar progressBar;
     private TextInputEditText etSearch;
     private ChipGroup chipGroupTime;
     
-    private DatabaseReference mDatabase;
+    private FirebaseFirestore db;
     private VisitorAdapter adapter;
     private List<Visitor> visitorList = new ArrayList<>();
     private List<Visitor> filteredList = new ArrayList<>();
-    private ValueEventListener logsListener;
+    private ListenerRegistration logsListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_visitor_logs);
 
-        mDatabase = FirebaseDatabase.getInstance().getReference();
+        db = FirebaseFirestore.getInstance();
 
         initViews();
         setupRecyclerView();
@@ -61,12 +60,16 @@ public class VisitorLogsActivity extends AppCompatActivity {
         etSearch = findViewById(R.id.etSearch);
         chipGroupTime = findViewById(R.id.chipGroupTime);
 
-        findViewById(R.id.toolbar).setOnClickListener(v -> finish());
+        if (findViewById(R.id.toolbar) != null) {
+            findViewById(R.id.toolbar).setOnClickListener(v -> finish());
+        }
     }
 
     private void setupRecyclerView() {
         rvVisitors.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new VisitorAdapter(filteredList); 
+        // role "admin" to see all logs
+        // Using VisitorAdapter from the same package which matches the constructor arguments
+        adapter = new VisitorAdapter(filteredList, "admin", null); 
         rvVisitors.setAdapter(adapter);
     }
 
@@ -92,64 +95,47 @@ public class VisitorLogsActivity extends AppCompatActivity {
 
     private void loadLogs(String timeFrame) {
         if (logsListener != null) {
-            mDatabase.child("visitors").removeEventListener(logsListener);
+            logsListener.remove();
         }
         
         progressBar.setVisibility(View.VISIBLE);
         
-        logsListener = mDatabase.child("visitors").addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(@NonNull DataSnapshot snapshot) {
-                progressBar.setVisibility(View.GONE);
-                visitorList.clear();
-                
-                long cutoffTimestamp = 0;
-                Calendar cal = Calendar.getInstance();
-                cal.set(Calendar.HOUR_OF_DAY, 0);
-                cal.set(Calendar.MINUTE, 0);
-                cal.set(Calendar.SECOND, 0);
+        Query query = db.collection("visitors")
+                .orderBy("timestamp", Query.Direction.DESCENDING);
 
-                if ("today".equals(timeFrame)) {
-                    cutoffTimestamp = cal.getTimeInMillis();
-                } else if ("week".equals(timeFrame)) {
-                    cal.add(Calendar.DAY_OF_YEAR, -7);
-                    cutoffTimestamp = cal.getTimeInMillis();
-                } else if ("month".equals(timeFrame)) {
-                    cal.add(Calendar.MONTH, -1);
-                    cutoffTimestamp = cal.getTimeInMillis();
-                }
+        if (!"all".equals(timeFrame)) {
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
 
-                for (DataSnapshot ds : snapshot.getChildren()) {
-                    Visitor visitor = ds.getValue(Visitor.class);
-                    if (visitor != null && "Visitor".equalsIgnoreCase(visitor.getPurpose())) {
-                        Object ts = ds.child("timestamp").getValue();
-                        long visitorTs = 0;
-                        if (ts instanceof Long) {
-                            visitorTs = (Long) ts;
-                        }
+            if ("week".equals(timeFrame)) {
+                cal.add(Calendar.DAY_OF_YEAR, -7);
+            } else if ("month".equals(timeFrame)) {
+                cal.add(Calendar.MONTH, -1);
+            }
+            query = query.whereGreaterThanOrEqualTo("timestamp", new Timestamp(cal.getTime()));
+        }
 
-                        if ("all".equals(timeFrame) || visitorTs >= cutoffTimestamp) {
-                            visitorList.add(visitor);
-                        }
+        logsListener = query.addSnapshotListener((snapshots, e) -> {
+            progressBar.setVisibility(View.GONE);
+            if (e != null) {
+                Log.e(TAG, "Listen failed", e);
+                return;
+            }
+
+            visitorList.clear();
+            if (snapshots != null) {
+                for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                    Visitor visitor = doc.toObject(Visitor.class);
+                    if (visitor != null) {
+                        visitor.setVisitorId(doc.getId());
+                        visitorList.add(visitor);
                     }
                 }
-                
-                // Sort by timestamp descending
-                Collections.sort(visitorList, (v1, v2) -> {
-                    Object t1 = v1.getTimestamp();
-                    Object t2 = v2.getTimestamp();
-                    long time1 = (t1 instanceof Long) ? (Long) t1 : 0;
-                    long time2 = (t2 instanceof Long) ? (Long) t2 : 0;
-                    return Long.compare(time2, time1);
-                });
-
-                filterLogs(etSearch.getText().toString());
             }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError error) {
-                progressBar.setVisibility(View.GONE);
-            }
+            filterLogs(etSearch.getText().toString());
         });
     }
 
@@ -172,8 +158,8 @@ public class VisitorLogsActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (mDatabase != null && logsListener != null) {
-            mDatabase.child("visitors").removeEventListener(logsListener);
+        if (logsListener != null) {
+            logsListener.remove();
         }
     }
 }

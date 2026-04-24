@@ -7,12 +7,16 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.securiodb.R;
 import com.example.securiodb.models.User;
 
 import java.util.List;
+
+import de.hdodenhof.circleimageview.CircleImageView;
 
 public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder> {
 
@@ -45,12 +49,22 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
         if ("owner".equalsIgnoreCase(user.getRole())) {
             holder.tvFlat.setVisibility(View.VISIBLE);
             holder.tvFlat.setText("Flat: " + user.getFlatNumber());
-            holder.tvRole.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    holder.itemView.getContext().getResources().getColor(R.color.status_approved)));
+            holder.tvRole.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), R.color.status_approved_text));
+            holder.tvRole.setBackgroundResource(R.drawable.badge_approved);
         } else {
             holder.tvFlat.setVisibility(View.GONE);
-            holder.tvRole.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
-                    holder.itemView.getContext().getResources().getColor(R.color.admin_primary)));
+            holder.tvRole.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary));
+            holder.tvRole.setBackgroundResource(R.drawable.badge_pending);
+        }
+
+        // Load profile image
+        if (user.getProfileImageUrl() != null && !user.getProfileImageUrl().isEmpty()) {
+            Glide.with(holder.itemView.getContext())
+                    .load(user.getProfileImageUrl())
+                    .placeholder(android.R.drawable.ic_menu_report_image)
+                    .into(holder.ivAvatar);
+        } else {
+            holder.ivAvatar.setImageResource(android.R.drawable.ic_menu_report_image);
         }
 
         holder.btnDelete.setOnClickListener(v -> listener.onDeleteClick(user));
@@ -69,6 +83,7 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
     static class UserViewHolder extends RecyclerView.ViewHolder {
         TextView tvName, tvEmail, tvRole, tvFlat;
         ImageView btnDelete;
+        CircleImageView ivAvatar;
 
         public UserViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -77,6 +92,7 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
             tvRole = itemView.findViewById(R.id.tvUserRole);
             tvFlat = itemView.findViewById(R.id.tvUserFlat);
             btnDelete = itemView.findViewById(R.id.btnDeleteUser);
+            ivAvatar = itemView.findViewById(R.id.ivUserAvatar);
         }
     }
 }

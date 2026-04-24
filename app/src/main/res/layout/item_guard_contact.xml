@@ -4,34 +4,56 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="8dp"
-    app:cardCornerRadius="12dp">
+    app:cardCornerRadius="12dp"
+    app:cardBackgroundColor="@color/card_white"
+    app:cardElevation="2dp">
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:id="@+id/tvGuardName"
+        <LinearLayout
+            android:id="@+id/llInfo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Guard Name"
-            android:textColor="@color/text_main"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:layout_alignParentStart="true"
+            android:layout_toStartOf="@+id/ivDeleteGuard"
+            android:orientation="vertical">
 
-        <TextView
-            android:id="@+id/tvGuardPhone"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="+91 0000000000"
-            android:textColor="@color/primary_green"
-            android:textStyle="bold" />
+            <TextView
+                android:id="@+id/tvGuardName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Guard Name"
+                android:textColor="@color/dark_brown"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvGuardPhone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="+91 0000000000"
+                android:textColor="@color/primary"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <ImageView
+            android:id="@+id/ivDeleteGuard"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="false"
+            android:contentDescription="Delete Guard"
+            android:padding="4dp"
+            android:src="@android:drawable/ic_menu_delete"
+            app:tint="@android:color/holo_red_dark" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_below="@id/llInfo"
             android:layout_marginTop="12dp"
             android:orientation="horizontal">
 
@@ -41,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="4dp"
                 android:layout_weight="1"
-                android:backgroundTint="@color/primary_green"
+                android:backgroundTint="@color/primary"
                 android:text="📞 Call"
                 android:textColor="@color/white"/>
 
@@ -53,7 +75,7 @@
                 android:layout_marginStart="4dp"
                 android:layout_weight="1"
                 android:text="💬 SMS"
-                android:textColor="@color/primary_green" />
+                android:textColor="@color/primary" />
         </LinearLayout>
-    </LinearLayout>
+    </RelativeLayout>
 </com.google.android.material.card.MaterialCardView>

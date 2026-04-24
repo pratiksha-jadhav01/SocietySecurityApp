@@ -2,6 +2,8 @@ package com.example.securiodb;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -10,14 +12,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
 
 import java.util.Calendar;
 import java.util.Date;
 
 public class GuardProfileActivity extends AppCompatActivity {
 
-    private TextView tvName, tvTotalEntries, btnLogout, btnChangePassword, btnNotifications;
+    private TextView tvName, tvTotalEntries;
+    private Button btnLogout;
+    private View btnChangePassword, btnNotifications;
     private BottomNavigationView bottomNav;
     
     private FirebaseFirestore db;
@@ -31,7 +34,12 @@ public class GuardProfileActivity extends AppCompatActivity {
 
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
-        guardUid = mAuth.getUid();
+        if (mAuth.getCurrentUser() == null) {
+            startActivity(new Intent(this, LoginActivity.class));
+            finish();
+            return;
+        }
+        guardUid = mAuth.getCurrentUser().getUid();
 
         initViews();
         fetchProfileData();
@@ -94,6 +102,7 @@ public class GuardProfileActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_dashboard) {
                 startActivity(new Intent(this, GuardDashboardActivity.class));
+                finish();
                 return true;
             } else if (id == R.id.nav_add_entry) {
                 startActivity(new Intent(this, VisitorEntryActivity.class));
@@ -101,8 +110,10 @@ public class GuardProfileActivity extends AppCompatActivity {
             } else if (id == R.id.nav_visitors) {
                 startActivity(new Intent(this, StatusListActivity.class));
                 return true;
+            } else if (id == R.id.nav_profile) {
+                return true;
             }
-            return true;
+            return false;
         });
     }
 }

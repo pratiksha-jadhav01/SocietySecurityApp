@@ -1,6 +1,7 @@
 package com.example.securiodb;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -16,11 +17,16 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
+import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Activity for guards to mark the exit time of visitors and helpers.
+ * Shows all individuals currently inside the premises.
+ */
 public class MarkExitActivity extends AppCompatActivity implements StatusAdapter.OnExitClickListener {
 
     private RecyclerView rvMarkExit;
@@ -30,7 +36,6 @@ public class MarkExitActivity extends AppCompatActivity implements StatusAdapter
     private List<Map<String, Object>> allInsideEntries = new ArrayList<>();
     
     private FirebaseFirestore db;
-    private String guardUid;
     private ListenerRegistration registration;
 
     @Override
@@ -39,7 +44,6 @@ public class MarkExitActivity extends AppCompatActivity implements StatusAdapter
         setContentView(R.layout.activity_mark_exit);
 
         db = FirebaseFirestore.getInstance();
-        guardUid = FirebaseAuth.getInstance().getUid();
 
         initViews();
         setupRecyclerView();
@@ -60,13 +64,21 @@ public class MarkExitActivity extends AppCompatActivity implements StatusAdapter
         rvMarkExit.setAdapter(adapter);
     }
 
+    /**
+     * Listens for all individuals (Visitors/Helpers) who are currently inside.
+     * Note: Removed 'createdBy' filter so any guard on duty can mark any person's exit.
+     */
     private void setupRealtimeListener() {
+        // Query for everyone currently inside (Approved but no exit time recorded)
         registration = db.collection("visitors")
-                .whereEqualTo("createdBy", guardUid)
                 .whereEqualTo("status", "Approved")
                 .whereEqualTo("exitTime", null)
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .addSnapshotListener((value, error) -> {
-                    if (error != null) return;
+                    if (error != null) {
+                        Log.e("MarkExit", "Listen failed", error);
+                        return;
+                    }
                     if (value != null) {
                         allInsideEntries.clear();
                         for (DocumentSnapshot doc : value.getDocuments()) {
@@ -97,6 +109,9 @@ public class MarkExitActivity extends AppCompatActivity implements StatusAdapter
         });
     }
 
+    /**
+     * Filters the currently inside list by name or flat number.
+     */
     private void filterList(String query) {
         List<Map<String, Object>> filteredList = new ArrayList<>();
         String lowerQuery = query.toLowerCase().trim();
@@ -105,8 +120,10 @@ public class MarkExitActivity extends AppCompatActivity implements StatusAdapter
             filteredList.addAll(allInsideEntries);
         } else {
             for (Map<String, Object> entry : allInsideEntries) {
-                String name = ((String) entry.get("name")).toLowerCase();
-                String flat = ((String) entry.get("flatNumber")).toLowerCase();
+                String name = getStr(entry, "name").toLowerCase();
+                String flat = getStr(entry, "flatNumber").toLowerCase();
+                if (flat.isEmpty()) flat = getStr(entry, "flatNo").toLowerCase();
+
                 if (name.contains(lowerQuery) || flat.contains(lowerQuery)) {
                     filteredList.add(entry);
                 }
@@ -117,11 +134,25 @@ public class MarkExitActivity extends AppCompatActivity implements StatusAdapter
         tvEmpty.setVisibility(filteredList.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
+    private String getStr(Map<String, Object> map, String key) {
+        Object val = map.get(key);
+        return (val != null) ? String.valueOf(val) : "";
+    }
+
     @Override
     public void onExitClick(String docId) {
         db.collection("visitors").document(docId)
                 .update("exitTime", FieldValue.serverTimestamp())
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Exit marked", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Exit marked successfully", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to mark exit: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    @Override
+    public void onDeleteClick(String docId) {
+        db.collection("visitors").document(docId)
+                .delete()
+                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Entry deleted", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to delete: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     @Override

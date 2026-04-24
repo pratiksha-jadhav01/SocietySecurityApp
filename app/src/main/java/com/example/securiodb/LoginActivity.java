@@ -24,6 +24,10 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -33,6 +37,7 @@ public class LoginActivity extends AppCompatActivity {
     private ProgressBar progressBar;
     private FirebaseAuth mAuth;
     private DatabaseReference mDatabase;
+    private FirebaseFirestore mFirestore;
 
     private MaterialCardView cardGuard, cardOwner, cardAdmin;
     private ImageView ivGuard, ivOwner, ivAdmin;
@@ -46,6 +51,7 @@ public class LoginActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         mDatabase = FirebaseDatabase.getInstance().getReference();
+        mFirestore = FirebaseFirestore.getInstance();
 
         // Bind Views
         etEmail = findViewById(R.id.etEmail);
@@ -101,13 +107,15 @@ public class LoginActivity extends AppCompatActivity {
 
     private void resetRoleUI(MaterialCardView card, ImageView iv, TextView tv) {
         card.setCardBackgroundColor(Color.WHITE);
-        card.setStrokeColor(ColorStateList.valueOf(Color.parseColor("#1565C0")));
-        iv.setImageTintList(ColorStateList.valueOf(Color.parseColor("#1565C0")));
-        tv.setTextColor(Color.parseColor("#1565C0"));
+        int softBrown = ContextCompat.getColor(this, R.color.soft_brown);
+        card.setStrokeColor(ColorStateList.valueOf(softBrown));
+        iv.setImageTintList(ColorStateList.valueOf(softBrown));
+        tv.setTextColor(softBrown);
     }
 
     private void setSelectedUI(MaterialCardView card, ImageView iv, TextView tv) {
-        card.setCardBackgroundColor(ColorStateList.valueOf(Color.parseColor("#1565C0")));
+        int coffeeBrown = ContextCompat.getColor(this, R.color.coffee_brown);
+        card.setCardBackgroundColor(ColorStateList.valueOf(coffeeBrown));
         card.setStrokeColor(ColorStateList.valueOf(Color.TRANSPARENT));
         iv.setImageTintList(ColorStateList.valueOf(Color.WHITE));
         tv.setTextColor(Color.WHITE);
@@ -143,18 +151,20 @@ public class LoginActivity extends AppCompatActivity {
         mDatabase.child("users").child(uid).addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot snapshot) {
-                showProgress(false);
                 if (snapshot.exists()) {
                     String role = snapshot.child("role").getValue(String.class);
                     
                     if (expectedRole != null && !expectedRole.equalsIgnoreCase(role)) {
+                        showProgress(false);
                         Toast.makeText(LoginActivity.this, "Unauthorized access for " + expectedRole, Toast.LENGTH_SHORT).show();
                         mAuth.signOut();
                         return;
                     }
 
-                    navigateToDashboard(role);
+                    // Force sync to Firestore to ensure permissions are correct
+                    syncUserToFirestore(uid, snapshot, role != null ? role.toLowerCase() : expectedRole);
                 } else {
+                    showProgress(false);
                     mAuth.signOut();
                     Toast.makeText(LoginActivity.this, "User record not found in Database", Toast.LENGTH_SHORT).show();
                 }
@@ -166,6 +176,36 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(LoginActivity.this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void syncUserToFirestore(String uid, DataSnapshot rtdbSnapshot, String role) {
+        // Prepare user data from RTDB snapshot
+        Map<String, Object> userData = new HashMap<>();
+        for (DataSnapshot ds : rtdbSnapshot.getChildren()) {
+            String key = ds.getKey();
+            Object value = ds.getValue();
+            if ("role".equals(key) && value instanceof String) {
+                userData.put(key, ((String) value).toLowerCase());
+            } else {
+                userData.put(key, value);
+            }
+        }
+        
+        // Ensure role is definitely there and lowercase
+        userData.put("role", role.toLowerCase());
+        
+        // Add/Update Firestore document
+        mFirestore.collection("users").document(uid).set(userData)
+                .addOnCompleteListener(task -> {
+                    showProgress(false);
+                    if (task.isSuccessful()) {
+                        navigateToDashboard(role.toLowerCase());
+                    } else {
+                        Toast.makeText(LoginActivity.this, "Sync Error: " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                        // Still try to navigate if we have the role
+                        navigateToDashboard(role.toLowerCase());
+                    }
+                });
     }
 
     private void navigateToDashboard(String role) {

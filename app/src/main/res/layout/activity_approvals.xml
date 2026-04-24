@@ -3,30 +3,32 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bgLight">
+    android:background="@color/body_bg">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/admin_primary">
+        android:background="@color/cream_header"
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:navigationIcon="@android:drawable/ic_menu_revert"
-            app:navigationIconTint="@color/white"
+            app:navigationIconTint="@color/dark_brown"
             app:title="Approvals Control"
-            app:titleTextColor="@color/white" />
+            app:titleTextColor="@color/dark_brown" />
 
         <com.google.android.material.tabs.TabLayout
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@color/admin_primary"
-            app:tabIndicatorColor="@color/white"
-            app:tabSelectedTextColor="@color/white"
-            app:tabTextColor="#B3FFFFFF">
+            android:background="@android:color/transparent"
+            app:tabIndicatorColor="@color/primary"
+            app:tabSelectedTextColor="@color/primary"
+            app:tabTextColor="@color/soft_brown"
+            app:tabRippleColor="@color/light_cream">
             <com.google.android.material.tabs.TabItem android:text="Pending" />
             <com.google.android.material.tabs.TabItem android:text="All" />
         </com.google.android.material.tabs.TabLayout>
@@ -53,14 +55,14 @@
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:src="@android:drawable/checkbox_on_background"
-            app:tint="@color/primary_green" />
+            app:tint="@color/border_color" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="No pending requests!"
-            android:textColor="@color/text_secondary"
+            android:textColor="@color/soft_brown"
             android:textSize="16sp" />
     </LinearLayout>
 
@@ -69,6 +71,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:visibility="gone" />
+        android:visibility="gone"
+        android:indeterminateTint="@color/primary" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
