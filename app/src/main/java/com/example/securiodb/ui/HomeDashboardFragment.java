@@ -198,7 +198,7 @@ public class HomeDashboardFragment extends Fragment {
             cardComplaint.setOnClickListener(x -> startActivity(new Intent(getActivity(), OwnerComplaintActivity.class)));
         }
 
-        // Card Helpers - Change this to load the DailyHelperFragment in the dashboard activity
+        // Card Helpers
         View cardHelpers = v.findViewById(R.id.cardHelpers);
         if (cardHelpers != null) {
             cardHelpers.setOnClickListener(x -> {

@@ -212,7 +212,8 @@ public class AdminDashboardActivity extends AppCompatActivity {
         if (cardBillHistory != null) cardBillHistory.setOnClickListener(v -> startActivity(new Intent(this, AdminMaintenanceActivity.class)));
 
         if (cardNoticeBoard != null) {
-            cardNoticeBoard.setOnClickListener(v -> startActivity(new Intent(this, AdminNoticeActivity.class)));
+            // Updated to open AdminNoticeBoardActivity instead of direct Post Form
+            cardNoticeBoard.setOnClickListener(v -> startActivity(new Intent(this, AdminNoticeBoardActivity.class)));
         }
 
         if (cardStatVisitors != null) cardStatVisitors.setOnClickListener(v -> startActivity(new Intent(this, VisitorLogsActivity.class)));
