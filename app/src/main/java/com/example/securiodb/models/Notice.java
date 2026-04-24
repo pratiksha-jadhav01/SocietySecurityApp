@@ -1,8 +1,11 @@
 package com.example.securiodb.models;
 
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.DocumentId;
 
 public class Notice {
+    @DocumentId
+    private String noticeId;
     private String title;
     private String message;
     private String createdBy;
@@ -17,6 +20,14 @@ public class Notice {
         this.message = message;
         this.createdBy = createdBy;
         this.timestamp = timestamp;
+    }
+
+    public String getNoticeId() {
+        return noticeId;
+    }
+
+    public void setNoticeId(String noticeId) {
+        this.noticeId = noticeId;
     }
 
     public String getTitle() {

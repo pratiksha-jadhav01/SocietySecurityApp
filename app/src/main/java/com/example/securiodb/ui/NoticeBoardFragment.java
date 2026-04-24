@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.securiodb.R;
 import com.example.securiodb.adapter.NoticeAdapter;
+import com.example.securiodb.models.Notice;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -20,13 +21,12 @@ import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class NoticeBoardFragment extends Fragment {
 
     private FirebaseFirestore db;
     private RecyclerView recycler;
-    private List<Map<String, Object>> noticeList = new ArrayList<>();
+    private List<Notice> noticeList = new ArrayList<>();
     private NoticeAdapter adapter;
     private ListenerRegistration listenerReg;
 
@@ -38,7 +38,7 @@ public class NoticeBoardFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         recycler = view.findViewById(R.id.recyclerNotices);
 
-        adapter = new NoticeAdapter(requireContext(), noticeList);
+        adapter = new NoticeAdapter(noticeList);
         recycler.setLayoutManager(new LinearLayoutManager(requireContext()));
         recycler.setAdapter(adapter);
 
@@ -48,15 +48,14 @@ public class NoticeBoardFragment extends Fragment {
 
     private void loadNotices() {
         listenerReg = db.collection("notices")
-            .orderBy("postedOn", Query.Direction.DESCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener((snap, e) -> {
                 if (snap == null || !isAdded()) return;
                 noticeList.clear();
                 for (DocumentSnapshot doc : snap.getDocuments()) {
-                    Map<String, Object> data = doc.getData();
-                    if (data != null) {
-                        data.put("docId", doc.getId());
-                        noticeList.add(data);
+                    Notice notice = doc.toObject(Notice.class);
+                    if (notice != null) {
+                        noticeList.add(notice);
                     }
                 }
                 adapter.notifyDataSetChanged();

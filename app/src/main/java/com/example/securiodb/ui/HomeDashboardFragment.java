@@ -12,6 +12,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.example.securiodb.ContactGuardActivity;
@@ -21,7 +23,10 @@ import com.example.securiodb.OwnerComplaintActivity;
 import com.example.securiodb.OwnerMaintenanceActivity;
 import com.example.securiodb.OwnerNoticeActivity;
 import com.example.securiodb.R;
+import com.example.securiodb.adapter.NoticeAdapter;
+import com.example.securiodb.models.Notice;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
@@ -36,8 +41,11 @@ public class HomeDashboardFragment extends Fragment {
     private FirebaseFirestore db;
     private TextView tvGreeting, tvFlatInfo, tvStatPending,
                      tvStatToday, tvStatHelpers, tvStatComplaints,
-                     tvPendingSubtitle, tvBillStatus, tvStatDeliveries;
+                     tvPendingSubtitle, tvBillStatus, tvStatDeliveries, tvRecentNoticesLabel;
     private ImageView ivSmallAvatar;
+    private RecyclerView recyclerNoticesPreview;
+    private NoticeAdapter noticeAdapter;
+    private List<Notice> noticeList = new ArrayList<>();
     private List<ListenerRegistration> listeners = new ArrayList<>();
 
     @Override
@@ -51,6 +59,7 @@ public class HomeDashboardFragment extends Fragment {
             flatNo = getArguments().getString("flatNo", "");
 
         bindViews(view);
+        setupNoticePreview();
         setGreeting();
         fetchUserProfile();
         loadStats();
@@ -69,6 +78,38 @@ public class HomeDashboardFragment extends Fragment {
         tvPendingSubtitle = v.findViewById(R.id.tvPendingSubtitle);
         tvBillStatus      = v.findViewById(R.id.tvBillStatus);
         ivSmallAvatar     = v.findViewById(R.id.ivSmallAvatar);
+        
+        tvRecentNoticesLabel = v.findViewById(R.id.tvRecentNoticesLabel);
+        recyclerNoticesPreview = v.findViewById(R.id.recyclerNoticesPreview);
+    }
+
+    private void setupNoticePreview() {
+        noticeAdapter = new NoticeAdapter(noticeList, false);
+        recyclerNoticesPreview.setLayoutManager(new LinearLayoutManager(getContext()));
+        recyclerNoticesPreview.setAdapter(noticeAdapter);
+
+        ListenerRegistration noticeListener = db.collection("notices")
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(3)
+            .addSnapshotListener((snap, e) -> {
+                if (snap != null && isAdded()) {
+                    noticeList.clear();
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
+                        Notice n = doc.toObject(Notice.class);
+                        if (n != null) noticeList.add(n);
+                    }
+                    noticeAdapter.notifyDataSetChanged();
+                    
+                    if (!noticeList.isEmpty()) {
+                        tvRecentNoticesLabel.setVisibility(View.VISIBLE);
+                        recyclerNoticesPreview.setVisibility(View.VISIBLE);
+                    } else {
+                        tvRecentNoticesLabel.setVisibility(View.GONE);
+                        recyclerNoticesPreview.setVisibility(View.GONE);
+                    }
+                }
+            });
+        listeners.add(noticeListener);
     }
 
     private void setGreeting() {

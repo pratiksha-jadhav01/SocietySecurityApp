@@ -39,7 +39,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
 
     private FirebaseFirestore mFirestore;
     private FirebaseAuth mAuth;
-    private ListenerRegistration statsListener;
+    private ListenerRegistration visitorsListener, deliveriesListener, insideListener, pendingListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -140,54 +140,42 @@ public class AdminDashboardActivity extends AppCompatActivity {
     }
 
     private void setupStatsListeners() {
-        statsListener = mFirestore.collection("visitors")
-                .addSnapshotListener((snapshots, e) -> {
-                    if (e != null) {
-                        Log.e(TAG, "Listen failed", e);
-                        return;
-                    }
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); 
+        cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0);
+        Date startOfToday = cal.getTime();
 
-                    if (snapshots != null) {
-                        int visitorsToday = 0;
-                        int deliveriesToday = 0;
-                        int activeInside = 0;
-                        int pendingApprovals = 0;
+        // 1. Visitors Today
+        visitorsListener = mFirestore.collection("visitors")
+                .whereEqualTo("purpose", "Visitor")
+                .whereGreaterThanOrEqualTo("timestamp", startOfToday)
+                .addSnapshotListener((snap, e) -> {
+                    if (snap != null && !isFinishing()) tvVisitorsToday.setText(String.valueOf(snap.size()));
+                });
 
-                        Calendar cal = Calendar.getInstance();
-                        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); 
-                        cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0);
-                        Date startOfToday = cal.getTime();
+        // 2. Deliveries Today
+        deliveriesListener = mFirestore.collection("visitors")
+                .whereEqualTo("purpose", "Delivery")
+                .whereGreaterThanOrEqualTo("timestamp", startOfToday)
+                .addSnapshotListener((snap, e) -> {
+                    if (snap != null && !isFinishing()) tvDeliveriesToday.setText(String.valueOf(snap.size()));
+                });
 
-                        for (DocumentSnapshot ds : snapshots.getDocuments()) {
-                            Timestamp ts = ds.getTimestamp("timestamp");
-                            String purpose = ds.getString("purpose");
-                            String status = ds.getString("status");
-                            Timestamp exitTime = ds.getTimestamp("exitTime");
+        // 3. Active Inside (Today only and exitTime is null)
+        insideListener = mFirestore.collection("visitors")
+                .whereGreaterThanOrEqualTo("timestamp", startOfToday)
+                .whereEqualTo("exitTime", null)
+                .whereEqualTo("status", "Approved")
+                .addSnapshotListener((snap, e) -> {
+                    if (snap != null && !isFinishing()) tvActiveInside.setText(String.valueOf(snap.size()));
+                });
 
-                            if (ts != null) {
-                                Date entryDate = ts.toDate();
-                                if (entryDate.after(startOfToday) || entryDate.equals(startOfToday)) {
-                                    if ("Visitor".equalsIgnoreCase(purpose)) visitorsToday++;
-                                    else if ("Delivery".equalsIgnoreCase(purpose)) deliveriesToday++;
-                                    
-                                    // Count as active inside ONLY if they entered TODAY and haven't left
-                                    if ("Approved".equalsIgnoreCase(status) && exitTime == null) {
-                                        activeInside++;
-                                    }
-
-                                    // Count as pending ONLY if requested TODAY
-                                    if ("Pending".equalsIgnoreCase(status)) {
-                                        pendingApprovals++;
-                                    }
-                                }
-                            }
-                        }
-
-                        if (tvVisitorsToday != null) tvVisitorsToday.setText(String.valueOf(visitorsToday));
-                        if (tvDeliveriesToday != null) tvDeliveriesToday.setText(String.valueOf(deliveriesToday));
-                        if (tvActiveInside != null) tvActiveInside.setText(String.valueOf(activeInside));
-                        if (tvPendingApprovals != null) tvPendingApprovals.setText(String.valueOf(pendingApprovals));
-                    }
+        // 4. Pending Approvals (Today only)
+        pendingListener = mFirestore.collection("visitors")
+                .whereGreaterThanOrEqualTo("timestamp", startOfToday)
+                .whereEqualTo("status", "Pending")
+                .addSnapshotListener((snap, e) -> {
+                    if (snap != null && !isFinishing()) tvPendingApprovals.setText(String.valueOf(snap.size()));
                 });
     }
 
@@ -212,8 +200,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         if (cardBillHistory != null) cardBillHistory.setOnClickListener(v -> startActivity(new Intent(this, AdminMaintenanceActivity.class)));
 
         if (cardNoticeBoard != null) {
-            // Updated to open AdminNoticeBoardActivity instead of direct Post Form
-            cardNoticeBoard.setOnClickListener(v -> startActivity(new Intent(this, AdminNoticeBoardActivity.class)));
+            cardNoticeBoard.setOnClickListener(v -> startActivity(new Intent(this, AdminNoticeActivity.class)));
         }
 
         if (cardStatVisitors != null) cardStatVisitors.setOnClickListener(v -> startActivity(new Intent(this, VisitorLogsActivity.class)));
@@ -232,8 +219,9 @@ public class AdminDashboardActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (statsListener != null) {
-            statsListener.remove();
-        }
+        if (visitorsListener != null) visitorsListener.remove();
+        if (deliveriesListener != null) deliveriesListener.remove();
+        if (insideListener != null) insideListener.remove();
+        if (pendingListener != null) pendingListener.remove();
     }
 }
