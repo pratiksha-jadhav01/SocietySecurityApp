@@ -62,8 +62,14 @@ public class VisitorAdapter extends RecyclerView.Adapter<VisitorAdapter.VisitorV
         }
 
         if (holder.ivVisitorPhoto != null) {
+            // Using both photoUrl and imageUrl for compatibility with different entry points
+            String imgUrl = visitor.getPhotoUrl();
+            if (imgUrl == null || imgUrl.isEmpty()) {
+                imgUrl = visitor.getImageUrl(); // Fallback to imageUrl
+            }
+
             Glide.with(holder.itemView.getContext())
-                    .load(visitor.getPhotoUrl())
+                    .load(imgUrl)
                     .placeholder(android.R.drawable.ic_menu_gallery)
                     .error(android.R.drawable.ic_menu_gallery)
                     .circleCrop()

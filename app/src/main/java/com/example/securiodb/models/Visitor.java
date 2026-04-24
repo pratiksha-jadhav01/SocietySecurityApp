@@ -9,6 +9,7 @@ public class Visitor {
     private String flatNumber;
     private String purpose;
     private String photoUrl;
+    private String imageUrl;
     private String status; // Pending, Approved, Rejected
     private String createdBy; // guardUid
     private String approvedBy; // ownerUid
@@ -35,6 +36,9 @@ public class Visitor {
 
     public String getPhotoUrl() { return photoUrl; }
     public void setPhotoUrl(String photoUrl) { this.photoUrl = photoUrl; }
+
+    public String getImageUrl() { return imageUrl != null ? imageUrl : photoUrl; }
+    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

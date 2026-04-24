@@ -156,6 +156,11 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".AdminNoticeActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- Owner Features -->
         <activity
             android:name=".OwnerApprovalsActivity"
@@ -204,6 +209,11 @@
 
         <activity
             android:name=".OwnerComplaintActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".OwnerNoticeActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 

@@ -19,6 +19,7 @@ import com.example.securiodb.DeliveryManagementActivity;
 import com.example.securiodb.OwnerApprovalsActivity;
 import com.example.securiodb.OwnerComplaintActivity;
 import com.example.securiodb.OwnerMaintenanceActivity;
+import com.example.securiodb.OwnerNoticeActivity;
 import com.example.securiodb.R;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -220,6 +221,12 @@ public class HomeDashboardFragment extends Fragment {
         View btnContactGuard = v.findViewById(R.id.btnContactGuard);
         if (btnContactGuard != null) {
             btnContactGuard.setOnClickListener(x -> startActivity(new Intent(getActivity(), ContactGuardActivity.class)));
+        }
+
+        // Quick Action: Notice Board
+        View btnNoticeBoard = v.findViewById(R.id.btnNoticeBoard);
+        if (btnNoticeBoard != null) {
+            btnNoticeBoard.setOnClickListener(x -> startActivity(new Intent(getActivity(), OwnerNoticeActivity.class)));
         }
 
         // Quick Action: Raise Complaint
