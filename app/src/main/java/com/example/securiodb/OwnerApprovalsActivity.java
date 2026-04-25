@@ -21,6 +21,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +33,7 @@ public class OwnerApprovalsActivity extends AppCompatActivity {
     private List<Map<String, Object>> pendingList = new ArrayList<>();
     private VisitorRequestAdapter adapter;
     private FirebaseFirestore db;
-    private ListenerRegistration listenerReg; // for cleanup
+    private ListenerRegistration listenerReg;
     private String ownerFlatNo;
 
     @Override
@@ -48,76 +49,72 @@ public class OwnerApprovalsActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        // Setup RecyclerView
         adapter = new VisitorRequestAdapter(this, pendingList,
-            // Approve callback
             (docId, position) -> updateVisitorStatus(docId, "Approved"),
-            // Reject callback
             (docId, position) -> updateVisitorStatus(docId, "Rejected")
         );
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
-        // Step 1: Get owner's flat number, then start listener
         fetchOwnerFlatAndListen();
     }
 
-    // ─── Fetch owner profile → then start real-time listener ───
     private void fetchOwnerFlatAndListen() {
-        String ownerUid = FirebaseAuth.getInstance()
-                              .getCurrentUser().getUid();
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
+        String ownerUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         db.collection("users").document(ownerUid).get()
             .addOnSuccessListener(doc -> {
                 if (doc.exists()) {
-                    // Changed from "flatNo" to "flatNumber" to match common schema if needed, 
-                    // but following your provided snippet which used "flatNo"
                     ownerFlatNo = doc.getString("flatNumber");
                     if (ownerFlatNo == null) ownerFlatNo = doc.getString("flatNo");
 
                     if (ownerFlatNo != null && !ownerFlatNo.isEmpty()) {
                         startRealTimeListener(ownerFlatNo);
                     } else {
-                        Toast.makeText(this,
-                            "Flat number not set in your profile",
-                            Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Flat number not set in your profile", Toast.LENGTH_LONG).show();
                     }
                 }
             })
-            .addOnFailureListener(e ->
-                Toast.makeText(this,
-                    "Error fetching profile: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show());
+            .addOnFailureListener(e -> Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
-    // ─── REAL-TIME LISTENER — fires instantly on new entries ───
     private void startRealTimeListener(String flatNo) {
+        // Simplified query to avoid FAILED_PRECONDITION (requires composite index)
         listenerReg = db.collection("visitors")
-            .whereIn("flatNumber", java.util.Arrays.asList(flatNo, flatNo.toUpperCase(), flatNo.toLowerCase()))   // Support different cases
-            .whereEqualTo("status",  "Pending") // only pending requests
-            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .whereEqualTo("flatNumber", flatNo)
             .addSnapshotListener((snapshots, error) -> {
-
                 if (error != null) {
                     Log.e("OwnerApprovals", "Listener error: " + error);
                     return;
                 }
                 if (snapshots == null) return;
 
-                // Rebuild list on every change
                 pendingList.clear();
                 for (DocumentSnapshot doc : snapshots.getDocuments()) {
                     Map<String, Object> data = doc.getData();
                     if (data != null) {
-                        data.put("docId", doc.getId()); // needed for update
-                        pendingList.add(data);
+                        String status = (String) data.get("status");
+                        // Accept both Visitor and Delivery requests if they are Pending
+                        if ("Pending".equalsIgnoreCase(status)) {
+                            data.put("docId", doc.getId());
+                            pendingList.add(data);
+                        }
                     }
                 }
 
-                // Update RecyclerView instantly
+                // Sort by timestamp manually in Java (descending) to avoid index requirement
+                Collections.sort(pendingList, (m1, m2) -> {
+                    Object t1 = m1.get("timestamp");
+                    Object t2 = m2.get("timestamp");
+                    if (t1 instanceof com.google.firebase.Timestamp && t2 instanceof com.google.firebase.Timestamp) {
+                        return ((com.google.firebase.Timestamp) t2).compareTo((com.google.firebase.Timestamp) t1);
+                    }
+                    return 0;
+                });
+
                 adapter.notifyDataSetChanged();
 
-                // Show/hide empty state
                 if (pendingList.isEmpty()) {
                     layoutEmpty.setVisibility(View.VISIBLE);
                     recyclerView.setVisibility(View.GONE);
@@ -128,31 +125,23 @@ public class OwnerApprovalsActivity extends AppCompatActivity {
             });
     }
 
-    // ─── Approve or Reject ──────────────────────────────────────
     private void updateVisitorStatus(String docId, String newStatus) {
-        String ownerUid = FirebaseAuth.getInstance()
-                              .getCurrentUser().getUid();
+        String ownerUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
 
         Map<String, Object> update = new HashMap<>();
-        update.put("status",     newStatus);
+        update.put("status", newStatus);
         update.put("approvedBy", ownerUid);
         update.put("approvedAt", FieldValue.serverTimestamp());
 
         db.collection("visitors").document(docId)
             .update(update)
             .addOnSuccessListener(v -> {
-                // Snapshot listener auto-removes card — no manual list edit needed
-                String msg = newStatus.equals("Approved")
-                    ? "✅ Visitor Approved" : "❌ Visitor Rejected";
+                String msg = newStatus.equals("Approved") ? "✅ Approved" : "❌ Rejected";
                 Snackbar.make(recyclerView, msg, Snackbar.LENGTH_SHORT).show();
             })
-            .addOnFailureListener(e ->
-                Toast.makeText(this,
-                    "Update failed: " + e.getMessage(),
-                    Toast.LENGTH_SHORT).show());
+            .addOnFailureListener(e -> Toast.makeText(this, "Update failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
-    // ─── ALWAYS remove listener to prevent memory leaks ────────
     @Override
     protected void onDestroy() {
         super.onDestroy();

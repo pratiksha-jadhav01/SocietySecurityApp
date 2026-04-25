@@ -147,7 +147,7 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".AdminComplaintsActivity"
+            android:name=".AdminComplaintActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 

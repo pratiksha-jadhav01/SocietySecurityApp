@@ -98,6 +98,7 @@
                         app:layout_constraintTop_toTopOf="parent"
                         app:tint="#8B6440" />
 
+                    <!-- Stat Today (Total Today) -->
                     <TextView
                         android:id="@+id/tvStatToday"
                         android:layout_width="wrap_content"
@@ -121,6 +122,7 @@
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/ivVisitorIcon" />
 
+                    <!-- Pending Subtitle with StatPending ID added -->
                     <TextView
                         android:id="@+id/tvPendingSubtitle"
                         android:layout_width="wrap_content"
@@ -130,6 +132,13 @@
                         android:textSize="12sp"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@id/tvVisitorLabel" />
+
+                    <TextView
+                        android:id="@+id/tvStatPending"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp"
+                        android:visibility="gone"
+                        tools:ignore="MissingConstraints" />
                 </androidx.constraintlayout.widget.ConstraintLayout>
             </com.google.android.material.card.MaterialCardView>
 

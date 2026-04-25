@@ -1,6 +1,7 @@
 package com.example.securiodb.ui;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -25,6 +26,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +52,6 @@ public class ApprovalsFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
         if (getArguments() != null) {
             flatNo = getArguments().getString("flatNo", "");
-            // Support both "purpose" and "type" keys for backward compatibility in arguments
             filterType = getArguments().getString("type", getArguments().getString("purpose", "Visitor"));
         }
 
@@ -78,53 +79,65 @@ public class ApprovalsFragment extends Fragment {
         if (flatNo == null || flatNo.isEmpty()) return;
 
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
-        if (layoutEmpty != null) layoutEmpty.setVisibility(View.GONE);
-
-        // We filter by flatNumber OR flatNo using multiple queries if needed, 
-        // but here we'll try to use the most common one and handle the other via code or unified schema.
-        // For now, let's use the field we've standardized on: flatNumber
         
-        Query query = db.collection("visitors")
+        // Simplified query to avoid FAILED_PRECONDITION (composite index requirement)
+        // Fetching by flatNumber and filtering status/sorting in Java
+        db.collection("visitors")
             .whereEqualTo("flatNumber", flatNo)
-            .whereEqualTo("status", "Pending")
-            .orderBy("timestamp", Query.Direction.DESCENDING);
+            .addSnapshotListener((snapshots, error) -> {
+                if (!isAdded()) return;
+                if (progressBar != null) progressBar.setVisibility(View.GONE);
+                
+                if (error != null) {
+                    Log.e("ApprovalsFragment", "Error: " + error.getMessage());
+                    return;
+                }
+                
+                pendingList.clear();
+                if (snapshots != null) {
+                    for (DocumentSnapshot doc : snapshots.getDocuments()) {
+                        Map<String, Object> data = doc.getData();
+                        if (data != null) {
+                            String status = (String) data.get("status");
+                            // Filter for PENDING status
+                            if (!"Pending".equalsIgnoreCase(status)) continue;
 
-        listenerReg = query.addSnapshotListener((snapshots, error) -> {
-            if (!isAdded()) return;
-            if (progressBar != null) progressBar.setVisibility(View.GONE);
-            
-            if (error != null) {
-                return;
-            }
-            
-            pendingList.clear();
-            if (snapshots != null) {
-                for (DocumentSnapshot doc : snapshots.getDocuments()) {
-                    Map<String, Object> data = doc.getData();
-                    if (data != null) {
-                        // Client-side filtering for entryType to allow for flexibility with "Visitor" vs "Delivery"
-                        String entryType = (String) data.get("entryType");
-                        if (entryType == null) entryType = (String) data.get("purpose"); // fallback
-                        
-                        if (filterType.equalsIgnoreCase("Delivery")) {
-                            if ("Delivery".equalsIgnoreCase(entryType)) {
-                                data.put("docId", doc.getId());
-                                pendingList.add(data);
-                            }
-                        } else {
-                            // If filtering for Visitors, show everything that isn't Delivery
-                            if (!"Delivery".equalsIgnoreCase(entryType)) {
-                                data.put("docId", doc.getId());
-                                pendingList.add(data);
+                            String entryType = (String) data.get("entryType");
+                            if (entryType == null) entryType = (String) data.get("purpose"); 
+
+                            if (filterType.equalsIgnoreCase("Delivery")) {
+                                if ("Delivery".equalsIgnoreCase(entryType)) {
+                                    data.put("docId", doc.getId());
+                                    pendingList.add(data);
+                                }
+                            } else {
+                                // Visitor type: Show everything that isn't Delivery
+                                if (!"Delivery".equalsIgnoreCase(entryType)) {
+                                    data.put("docId", doc.getId());
+                                    pendingList.add(data);
+                                }
                             }
                         }
                     }
                 }
-            }
-            adapter.notifyDataSetChanged();
-            if (layoutEmpty != null) layoutEmpty.setVisibility(pendingList.isEmpty() ? View.VISIBLE : View.GONE);
-            if (recyclerView != null) recyclerView.setVisibility(pendingList.isEmpty() ? View.GONE : View.VISIBLE);
-        });
+
+                // Sort by timestamp manually in Java (descending)
+                Collections.sort(pendingList, (m1, m2) -> {
+                    Object t1 = m1.get("timestamp");
+                    Object t2 = m2.get("timestamp");
+                    if (t1 instanceof com.google.firebase.Timestamp && t2 instanceof com.google.firebase.Timestamp) {
+                        return ((com.google.firebase.Timestamp) t2).compareTo((com.google.firebase.Timestamp) t1);
+                    }
+                    if (t1 instanceof Long && t2 instanceof Long) {
+                        return ((Long) t2).compareTo((Long) t1);
+                    }
+                    return 0;
+                });
+
+                adapter.notifyDataSetChanged();
+                if (layoutEmpty != null) layoutEmpty.setVisibility(pendingList.isEmpty() ? View.VISIBLE : View.GONE);
+                if (recyclerView != null) recyclerView.setVisibility(pendingList.isEmpty() ? View.GONE : View.VISIBLE);
+            });
     }
 
     private void updateVisitorStatus(String docId, String newStatus) {

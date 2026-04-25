@@ -147,38 +147,57 @@ public class HomeDashboardFragment extends Fragment {
         java.util.Date startOfDay = cal.getTime();
 
         // Stat 1: Pending visitors (Today only)
+        // Simplified query to avoid FAILED_PRECONDITION (requires index)
         ListenerRegistration r1 = db.collection("visitors")
             .whereEqualTo("flatNumber", flatNo)
-            .whereEqualTo("status", "Pending")
-            .whereEqualTo("purpose", "Visitor")
-            .whereGreaterThanOrEqualTo("timestamp", startOfDay)
             .addSnapshotListener((snap, e) -> {
                 if (snap == null || !isAdded()) return;
-                int count = snap.size();
-                if (tvStatPending != null) tvStatPending.setText(String.valueOf(count));
-                if (tvPendingSubtitle != null) tvPendingSubtitle.setText(count + " pending approvals");
+                int pendingCount = 0;
+                for (DocumentSnapshot doc : snap.getDocuments()) {
+                    String status = doc.getString("status");
+                    String purpose = doc.getString("purpose");
+                    java.util.Date timestamp = doc.getDate("timestamp");
+                    if ("Pending".equalsIgnoreCase(status) && "Visitor".equalsIgnoreCase(purpose) 
+                        && timestamp != null && timestamp.after(startOfDay)) {
+                        pendingCount++;
+                    }
+                }
+                if (tvStatPending != null) tvStatPending.setText(String.valueOf(pendingCount));
+                if (tvPendingSubtitle != null) tvPendingSubtitle.setText(pendingCount + " pending approvals");
             });
         listeners.add(r1);
 
         // Stat 2: Visitors today
         ListenerRegistration r2 = db.collection("visitors")
             .whereEqualTo("flatNumber", flatNo)
-            .whereEqualTo("purpose", "Visitor")
-            .whereGreaterThanOrEqualTo("timestamp", startOfDay)
             .addSnapshotListener((snap, e) -> {
                 if (snap == null || !isAdded()) return;
-                if (tvStatToday != null) tvStatToday.setText(String.valueOf(snap.size()));
+                int todayCount = 0;
+                for (DocumentSnapshot doc : snap.getDocuments()) {
+                    String purpose = doc.getString("purpose");
+                    java.util.Date timestamp = doc.getDate("timestamp");
+                    if ("Visitor".equalsIgnoreCase(purpose) && timestamp != null && timestamp.after(startOfDay)) {
+                        todayCount++;
+                    }
+                }
+                if (tvStatToday != null) tvStatToday.setText(String.valueOf(todayCount));
             });
         listeners.add(r2);
 
         // Stat 5: Deliveries today
         ListenerRegistration r5 = db.collection("visitors")
             .whereEqualTo("flatNumber", flatNo)
-            .whereEqualTo("purpose", "Delivery")
-            .whereGreaterThanOrEqualTo("timestamp", startOfDay)
             .addSnapshotListener((snap, e) -> {
                 if (snap == null || !isAdded()) return;
-                if (tvStatDeliveries != null) tvStatDeliveries.setText(String.valueOf(snap.size()));
+                int deliveryCount = 0;
+                for (DocumentSnapshot doc : snap.getDocuments()) {
+                    String purpose = doc.getString("purpose");
+                    java.util.Date timestamp = doc.getDate("timestamp");
+                    if ("Delivery".equalsIgnoreCase(purpose) && timestamp != null && timestamp.after(startOfDay)) {
+                        deliveryCount++;
+                    }
+                }
+                if (tvStatDeliveries != null) tvStatDeliveries.setText(String.valueOf(deliveryCount));
             });
         listeners.add(r5);
 
@@ -205,11 +224,19 @@ public class HomeDashboardFragment extends Fragment {
         // Bill status (Firestore "bills" collection)
         db.collection("bills")
             .whereEqualTo("flatNo", flatNo)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
-            .limit(1).get()
+            .get()
             .addOnSuccessListener(snap -> {
                 if (!snap.isEmpty() && isAdded()) {
-                    String status = snap.getDocuments().get(0).getString("status");
+                    // Manual sorting in Java to avoid FAILED_PRECONDITION (requires index)
+                    List<DocumentSnapshot> docs = new ArrayList<>(snap.getDocuments());
+                    docs.sort((d1, d2) -> {
+                        java.util.Date t1 = d1.getDate("timestamp");
+                        java.util.Date t2 = d2.getDate("timestamp");
+                        if (t1 == null || t2 == null) return 0;
+                        return t2.compareTo(t1); // Descending
+                    });
+                    
+                    String status = docs.get(0).getString("status");
                     if (tvBillStatus != null) {
                         tvBillStatus.setText(status);
                         tvBillStatus.setTextColor("Paid".equalsIgnoreCase(status)

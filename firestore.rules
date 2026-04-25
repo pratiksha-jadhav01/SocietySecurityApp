@@ -8,108 +8,100 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    // Helper: get the role of the current user safely from 'users' collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'none');
     }
 
-    function getRole() {
-      let data = getUserData();
-      return data.get('role', 'none');
-    }
-
+    // Helper: is current user admin? (Checks for lowercase 'admin')
     function isAdmin() {
-      if (!isAuth()) return false;
-      let role = getRole();
-      return role == 'admin' || role == 'Admin' || role == 'system administrator';
+      return isAuth() && getUserRole() == "admin";
     }
 
+    // Helper: is current user owner?
     function isOwner() {
-      if (!isAuth()) return false;
-      let role = getRole();
-      return role == 'owner' || role == 'Owner';
-    }
-
-    function isGuard() {
-      if (!isAuth()) return false;
-      let role = getRole();
-      return role == 'guard' || role == 'Guard';
-    }
-
-    function ownerFlat() {
-      let data = getUserData();
-      return data.get('flatNumber', data.get('flatNo', ''));
+      return isAuth() && getUserRole() == "owner";
     }
 
     // --- COLLECTION RULES ---
 
-    // USERS
+    // USERS collection
     match /users/{userId} {
-      allow read:  if isAuth();
+      allow read: if isAuth();
       allow write: if isAuth() && (request.auth.uid == userId || isAdmin());
     }
 
-    // VISITORS
-    match /visitors/{visitorId} {
-      allow create: if isAuth() && (isGuard() || isAdmin());
-      allow read:   if isAuth();
-      allow update: if isAuth() && (
-          isAdmin() ||
-          (resource.data.get('flatNumber', '') == ownerFlat()) ||
-          (resource.data.get('createdBy', '') == request.auth.uid)
-      );
-      allow delete: if isAdmin();
-    }
-
-    // DAILY HELPERS
-    match /dailyHelpers/{helperId} {
-      allow read:   if isAuth();
-      allow create: if isAuth() && (isOwner() || isAdmin());
-      allow update, delete: if isAuth() && (
-          isAdmin() ||
-          resource.data.ownerUid == request.auth.uid
-      );
-    }
-
-    // BILLS
-    match /bills/{billId} {
-      allow read:   if isAuth();
-      // Allow owners to update the status of their own bills
-      allow update: if isAuth() && (
-          isAdmin() ||
-          (isOwner() && resource.data.flatNo == ownerFlat())
-      );
-      allow create, delete: if isAuth() && isAdmin();
-    }
-
-    // MAINTENANCE (Legacy/Compatibility)
-    match /maintenance/{billId} {
-      allow read:   if isAuth();
-      allow update: if isAuth() && (
-          isAdmin() ||
-          (isOwner() && resource.data.flatNo == ownerFlat())
-      );
-      allow create, delete: if isAuth() && isAdmin();
-    }
-
-    // COMPLAINTS
+    // COMPLAINTS collection
     match /complaints/{complaintId} {
-      allow create: if isAuth() && (isOwner() || isAdmin());
-      allow read:   if isAuth() && (
-          isAdmin() || resource.data.get('flatNo', '') == ownerFlat()
+      allow read: if isAuth();
+      allow create: if isAuth();
+      // Update: Admin can update status/response. Owner can update their own complaint.
+      allow update: if isAuth() && (
+        isAdmin() ||
+        resource.data.get('ownerUid', '') == request.auth.uid ||
+        resource.data.get('userId', '') == request.auth.uid
       );
-      allow update: if isAuth() && isAdmin();
+      // Delete: Admin or Creator
+      allow delete: if isAuth() && (
+        isAdmin() ||
+        resource.data.get('ownerUid', '') == request.auth.uid ||
+        resource.data.get('userId', '') == request.auth.uid
+      );
     }
 
-    // NOTICES
+    // NOTICES collection
     match /notices/{noticeId} {
-      allow read:  if isAuth();
-      allow write: if isAuth() && isAdmin();
+      allow read: if isAuth();
+      // FIX: Standardized admin check for posting notices (allows create, update, delete)
+      allow write: if isAdmin();
     }
 
-    // NOTIFICATIONS
+    // MAINTENANCE collection
+    match /maintenance/{docId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // BILLS collection
+    match /bills/{billId} {
+      allow read: if isAuth();
+      // Admin can manage all. Owner can update their own (status to Paid).
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (isOwner() && (
+        resource.data.get('flatNo', '') == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('flatNumber', '') ||
+        resource.data.get('flatNo', '') == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('flatNo', '')
+      ));
+    }
+
+    // VISITORS collection
+    match /visitors/{visitorId} {
+      allow read, create: if isAuth();
+      // Owners can update (approve/reject) visitors destined for their own flat.
+      allow update: if isAuth() && (
+        isAdmin() ||
+        getUserRole() == "guard" ||
+        (isOwner() && (
+          resource.data.get('flatNumber', '') == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('flatNumber', '') ||
+          resource.data.get('flatNumber', '') == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('flatNo', '')
+        ))
+      );
+      allow delete: if isAuth() && (
+        isAdmin() ||
+        getUserRole() == "guard"
+      );
+    }
+
+    // DAILY HELPERS collection
+    match /dailyHelpers/{helperId} {
+      allow read: if isAuth();
+      allow create: if isOwner() || isAdmin();
+      allow update, delete: if isAdmin() || (isOwner() && resource.data.get('ownerUid', '') == request.auth.uid);
+    }
+
+    // NOTIFICATIONS collection
     match /notifications/{notifId} {
       allow create, read, update: if isAuth();
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || resource.data.get('targetUid', '') == request.auth.uid;
     }
   }
 }

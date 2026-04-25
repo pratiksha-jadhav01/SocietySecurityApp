@@ -21,7 +21,7 @@ import java.util.Date;
 public class GuardDashboardActivity extends AppCompatActivity {
 
     private TextView tvWelcome, tvVisitorsToday, tvDeliveriesToday, tvInside;
-    private MaterialCardView cardAddVisitor, cardAddDelivery, cardMarkExit, cardLiveStatus, cardMyEntries, cardDailyHelpers;
+    private MaterialCardView cardAddVisitor, cardAddDelivery, cardLiveStatus, cardMyEntries, cardDailyHelpers;
     private View searchBar, ivLogoutContainer;
     private BottomNavigationView bottomNav;
 
@@ -59,7 +59,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
 
         cardAddVisitor = findViewById(R.id.cardAddVisitor);
         cardAddDelivery = findViewById(R.id.cardAddDelivery);
-        cardMarkExit = findViewById(R.id.cardMarkExit);
         cardLiveStatus = findViewById(R.id.cardLiveStatus);
         cardMyEntries = findViewById(R.id.cardMyEntries);
         cardDailyHelpers = findViewById(R.id.cardDailyHelpers);
@@ -121,7 +120,6 @@ public class GuardDashboardActivity extends AppCompatActivity {
     private void setupClickListeners() {
         cardAddVisitor.setOnClickListener(v -> startActivity(new Intent(this, VisitorEntryActivity.class)));
         cardAddDelivery.setOnClickListener(v -> startActivity(new Intent(this, AddDeliveryActivity.class)));
-        cardMarkExit.setOnClickListener(v -> startActivity(new Intent(this, MarkExitActivity.class)));
         cardLiveStatus.setOnClickListener(v -> startActivity(new Intent(this, LiveStatusActivity.class)));
         cardMyEntries.setOnClickListener(v -> startActivity(new Intent(this, StatusListActivity.class)));
         cardDailyHelpers.setOnClickListener(v -> startActivity(new Intent(this, GuardHelperListActivity.class)));

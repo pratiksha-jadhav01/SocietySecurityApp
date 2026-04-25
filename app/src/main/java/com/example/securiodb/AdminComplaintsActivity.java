@@ -25,18 +25,18 @@ import com.example.securiodb.models.ComplaintModel;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 public class AdminComplaintsActivity extends AppCompatActivity {
 
@@ -140,6 +140,7 @@ public class AdminComplaintsActivity extends AppCompatActivity {
         uploadedImageUrl = complaint.getResolutionImageUrl() != null ? complaint.getResolutionImageUrl() : "";
         if (!uploadedImageUrl.isEmpty()) {
             Glide.with(this).load(uploadedImageUrl).into(ivDialogImage);
+            ivDialogImage.setImageTintList(null);
         }
 
         frameImage.setOnClickListener(v -> openImagePicker());
@@ -166,30 +167,81 @@ public class AdminComplaintsActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PICK_IMAGE_REQUEST && resultCode == RESULT_OK && data != null && data.getData() != null) {
             imageUri = data.getData();
-            ivDialogImage.setImageURI(imageUri);
-            uploadImageToFirebase();
+            if (ivDialogImage != null) {
+                ivDialogImage.setImageURI(imageUri);
+                ivDialogImage.setImageTintList(null);
+            }
+            uploadImageToCloudinary();
         }
     }
 
-    private void uploadImageToFirebase() {
+    private void uploadImageToCloudinary() {
         if (imageUri == null) return;
 
-        pbDialogUpload.setVisibility(View.VISIBLE);
-        StorageReference storageRef = FirebaseStorage.getInstance().getReference().child("resolutions/" + UUID.randomUUID().toString());
+        if (pbDialogUpload != null) pbDialogUpload.setVisibility(View.VISIBLE);
+        
+        CloudinaryUploader.uploadImage(this, imageUri, new CloudinaryUploader.UploadCallback() {
+            @Override
+            public void onSuccess(String imageUrl) {
+                uploadedImageUrl = imageUrl;
+                if (pbDialogUpload != null) pbDialogUpload.setVisibility(View.GONE);
+                Toast.makeText(AdminComplaintsActivity.this, "Image uploaded", Toast.LENGTH_SHORT).show();
+            }
 
-        storageRef.putFile(imageUri)
-                .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                    uploadedImageUrl = uri.toString();
-                    pbDialogUpload.setVisibility(View.GONE);
-                    Toast.makeText(AdminComplaintsActivity.this, "Image uploaded", Toast.LENGTH_SHORT).show();
-                }))
-                .addOnFailureListener(e -> {
-                    pbDialogUpload.setVisibility(View.GONE);
-                    Toast.makeText(AdminComplaintsActivity.this, "Upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+            @Override
+            public void onFailure(String errorMessage) {
+                if (pbDialogUpload != null) pbDialogUpload.setVisibility(View.GONE);
+                Toast.makeText(AdminComplaintsActivity.this, "Upload failed: " + errorMessage, Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onProgress(int percent) {
+                // Could update progress bar
+            }
+        });
     }
 
     private void updateComplaint(String docId, String status, String response, String imageUrl) {
+        // ── DEBUG BLOCK — find the root cause ────────────────────
+        // Check 1: Is admin authenticated?
+        FirebaseUser currentUser =
+            FirebaseAuth.getInstance().getCurrentUser();
+
+        if (currentUser == null) {
+            Log.e("PERM_DEBUG", "USER IS NULL — not logged in!");
+            Toast.makeText(this,
+                "Error: Not logged in. Please login again.",
+                Toast.LENGTH_LONG).show();
+            return; // stop here
+        } else {
+            Log.d("PERM_DEBUG",
+                "Auth OK — UID: " + currentUser.getUid());
+        }
+
+        // Check 2: Is the docId valid?
+        if (docId == null || docId.isEmpty()) {
+            Log.e("PERM_DEBUG",
+                "docId IS NULL OR EMPTY!");
+            Toast.makeText(this,
+                "Error: Complaint ID missing.",
+                Toast.LENGTH_LONG).show();
+            return;
+        } else {
+            Log.d("PERM_DEBUG",
+                "docId OK: " + docId);
+        }
+
+        // Check 3: Log the exact Firestore path being written to
+        String firestorePath =
+            "complaints/" + docId;
+        Log.d("PERM_DEBUG",
+            "Writing to Firestore path: " + firestorePath);
+
+        // Check 4: Log the update data
+        Log.d("PERM_DEBUG",
+            "Update data → status: " + status + ", response: " + response);
+        // ── END DEBUG BLOCK ───────────────────────────────────────
+
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", status);
         updates.put("adminResponse", response);
@@ -198,7 +250,17 @@ public class AdminComplaintsActivity extends AppCompatActivity {
 
         db.collection("complaints").document(docId).update(updates)
                 .addOnSuccessListener(aVoid -> Toast.makeText(this, "Complaint updated!", Toast.LENGTH_SHORT).show())
-                .addOnFailureListener(e -> Toast.makeText(this, "Failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                .addOnFailureListener(e -> {
+                    // Log full error details
+                    Log.e("PERM_DEBUG",
+                        "Firestore update FAILED: "
+                        + e.getMessage()
+                        + " | Code: "
+                        + (e instanceof FirebaseFirestoreException ? ((FirebaseFirestoreException) e).getCode().name() : "N/A"));
+                    Toast.makeText(this,
+                        "Failed: " + e.getMessage(),
+                        Toast.LENGTH_LONG).show();
+                });
     }
 
     @Override

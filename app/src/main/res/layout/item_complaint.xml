@@ -34,6 +34,15 @@
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
+            <ImageView
+                android:id="@+id/btnDeleteComplaint"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="12dp"
+                android:src="@android:drawable/ic_menu_delete"
+                app:tint="#B00020"
+                android:contentDescription="Delete Complaint" />
+
             <TextView
                 android:id="@+id/tvStatus"
                 android:layout_width="wrap_content"
@@ -66,6 +75,15 @@
             android:textSize="14sp"
             android:layout_marginBottom="8dp" />
 
+        <ImageView
+            android:id="@+id/ivComplaintImage"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginBottom="8dp"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            android:background="#F5F5F5" />
+
         <TextView
             android:id="@+id/tvTime"
             android:layout_width="wrap_content"
@@ -75,17 +93,33 @@
             android:textSize="11sp"
             android:layout_marginBottom="8dp" />
 
-        <TextView
-            android:id="@+id/tvResponse"
+        <LinearLayout
+            android:id="@+id/layoutAdminResponse"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="vertical"
             android:background="#FDF2E9"
             android:padding="10dp"
-            android:text="Admin Response: We are looking into this."
-            android:textColor="#6B4C2A"
-            android:textSize="13sp"
-            android:textStyle="italic"
-            android:visibility="gone" />
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvResponse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Admin Response: We are looking into this."
+                android:textColor="#6B4C2A"
+                android:textSize="13sp"
+                android:textStyle="italic" />
+
+            <ImageView
+                android:id="@+id/ivResolutionImage"
+                android:layout_width="match_parent"
+                android:layout_height="150dp"
+                android:layout_marginTop="8dp"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                android:background="#FFFFFF" />
+        </LinearLayout>
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

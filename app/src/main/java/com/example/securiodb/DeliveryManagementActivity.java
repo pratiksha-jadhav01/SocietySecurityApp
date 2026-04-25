@@ -12,13 +12,10 @@ import com.example.securiodb.adapter.VisitorAdapter;
 import com.example.securiodb.models.VisitorModel;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
@@ -34,6 +31,7 @@ public class DeliveryManagementActivity extends AppCompatActivity {
     private String flatNumber;
     private List<VisitorModel> deliveryList = new ArrayList<>();
     private VisitorAdapter adapter;
+    private ListenerRegistration deliveryListener;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,16 +43,17 @@ public class DeliveryManagementActivity extends AppCompatActivity {
         chipGroupDelivery = findViewById(R.id.chipGroupDelivery);
 
         rvDeliveries.setLayoutManager(new LinearLayoutManager(this));
-        // Corrected constructor usage for VisitorAdapter
+        
+        // Updated adapter with both Approve and Reject logic
         adapter = new VisitorAdapter(this, deliveryList, new VisitorAdapter.OnItemClickListener() {
             @Override
             public void onApprove(String docId, int position) {
-                markAsReceived(docId);
+                updateDeliveryStatus(docId, "Approved");
             }
 
             @Override
             public void onReject(String docId, int position) {
-                // Not implemented for delivery in this context
+                updateDeliveryStatus(docId, "Rejected");
             }
         });
         rvDeliveries.setAdapter(adapter);
@@ -67,56 +66,80 @@ public class DeliveryManagementActivity extends AppCompatActivity {
         if (FirebaseAuth.getInstance().getCurrentUser() == null) return;
         
         String uid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        FirebaseDatabase.getInstance().getReference("users").child(uid)
-            .addListenerForSingleValueEvent(new ValueEventListener() {
-                @Override
-                public void onDataChange(@NonNull DataSnapshot snapshot) {
-                    if (snapshot.exists()) {
-                        flatNumber = snapshot.child("flatNumber").getValue(String.class);
-                        loadDeliveries();
-                    }
-                }
-
-                @Override
-                public void onCancelled(@NonNull DatabaseError error) {}
-            });
+        db.collection("users").document(uid).get().addOnSuccessListener(doc -> {
+            if (doc.exists()) {
+                flatNumber = doc.getString("flatNumber");
+                if (flatNumber == null) flatNumber = doc.getString("flatNo");
+                loadDeliveries();
+            }
+        });
     }
 
     private void loadDeliveries() {
         if (flatNumber == null) return;
+        if (deliveryListener != null) deliveryListener.remove();
 
-        Query query = db.collection("visitors")
+        // Simplified query to avoid FAILED_PRECONDITION (composite index requirement)
+        deliveryListener = db.collection("visitors")
                 .whereEqualTo("flatNumber", flatNumber)
-                .whereEqualTo("purpose", "Delivery");
+                .addSnapshotListener((value, e) -> {
+                    if (e != null || value == null) return;
+                    
+                    int checkedId = chipGroupDelivery.getCheckedChipId();
+                    Calendar cal = Calendar.getInstance();
+                    cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); 
+                    cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0);
+                    java.util.Date startOfDay = cal.getTime();
 
-        int checkedId = chipGroupDelivery.getCheckedChipId();
-        if (checkedId == R.id.chipDelToday) {
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0);
-            query = query.whereGreaterThanOrEqualTo("timestamp", cal.getTime());
-        } else if (checkedId == R.id.chipDelPending) {
-            query = query.whereEqualTo("status", "Pending");
-        } else if (checkedId == R.id.chipDelReceived) {
-            query = query.whereEqualTo("status", "Approved");
-        }
+                    deliveryList.clear();
+                    for (DocumentSnapshot doc : value.getDocuments()) {
+                        VisitorModel v = doc.toObject(VisitorModel.class);
+                        if (v != null) {
+                            String purpose = doc.getString("purpose");
+                            String status = doc.getString("status");
+                            java.util.Date timestamp = doc.getDate("timestamp");
 
-        query.orderBy("timestamp", Query.Direction.DESCENDING)
-             .get().addOnSuccessListener(value -> {
-            deliveryList.clear();
-            for (DocumentSnapshot doc : value.getDocuments()) {
-                VisitorModel v = doc.toObject(VisitorModel.class);
-                if (v != null) {
-                    v.setDocId(doc.getId());
-                    deliveryList.add(v);
-                }
-            }
-            adapter.notifyDataSetChanged();
-        }).addOnFailureListener(e -> Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                            // Filter for Delivery only
+                            if (!"Delivery".equalsIgnoreCase(purpose)) continue;
+
+                            boolean matchesFilter = true;
+                            if (checkedId == R.id.chipDelToday) {
+                                matchesFilter = (timestamp != null && timestamp.after(startOfDay));
+                            } else if (checkedId == R.id.chipDelPending) {
+                                matchesFilter = "Pending".equalsIgnoreCase(status);
+                            } else if (checkedId == R.id.chipDelReceived) {
+                                matchesFilter = "Approved".equalsIgnoreCase(status);
+                            }
+
+                            if (matchesFilter) {
+                                v.setDocId(doc.getId());
+                                deliveryList.add(v);
+                            }
+                        }
+                    }
+                    // Sort descending by timestamp in Java to avoid index requirement
+                    deliveryList.sort((v1, v2) -> {
+                        if (v1.getTimestamp() == null || v2.getTimestamp() == null) return 0;
+                        return v2.getTimestamp().compareTo(v1.getTimestamp());
+                    });
+                    adapter.notifyDataSetChanged();
+                });
     }
 
-    private void markAsReceived(String docId) {
+    private void updateDeliveryStatus(String docId, String status) {
         db.collection("visitors").document(docId)
-                .update("status", "Approved", "approvedAt", FieldValue.serverTimestamp())
-                .addOnSuccessListener(aVoid -> loadDeliveries());
+                .update("status", status, "approvedAt", FieldValue.serverTimestamp())
+                .addOnSuccessListener(aVoid -> {
+                    String msg = "Approved".equals(status) ? "✅ Delivery Approved" : "❌ Delivery Rejected";
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+                    // SnapshotListener will automatically update the list
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (deliveryListener != null) deliveryListener.remove();
     }
 }

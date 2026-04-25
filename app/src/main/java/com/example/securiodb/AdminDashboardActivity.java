@@ -16,6 +16,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
@@ -23,6 +24,8 @@ import com.google.firebase.firestore.Query;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AdminDashboardActivity extends AppCompatActivity {
 
@@ -49,11 +52,15 @@ public class AdminDashboardActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mFirestore = FirebaseFirestore.getInstance();
 
-        if (mAuth.getCurrentUser() == null) {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
+
+        // ── FIX 5: Verify admin user document exists in Firestore ──
+        verifyAdminDocument(user);
 
         initViews();
         setupBottomNav();
@@ -70,6 +77,38 @@ public class AdminDashboardActivity extends AppCompatActivity {
                 finish();
             });
         }
+    }
+
+    private void verifyAdminDocument(FirebaseUser user) {
+        mFirestore.collection("users")
+          .document(user.getUid())
+          .get()
+          .addOnSuccessListener(doc -> {
+              if (!doc.exists()) {
+                  Log.e("AdminFix", "Admin user doc MISSING in Firestore! Creating it...");
+                  Map<String, Object> adminData = new HashMap<>();
+                  adminData.put("role",  "admin");
+                  adminData.put("email", user.getEmail());
+                  adminData.put("uid",   user.getUid());
+                  adminData.put("name",  user.getDisplayName() != null ? user.getDisplayName() : "Admin");
+                  
+                  mFirestore.collection("users")
+                    .document(user.getUid())
+                    .set(adminData)
+                    .addOnSuccessListener(aVoid -> Log.d("AdminFix", "Admin doc created successfully"))
+                    .addOnFailureListener(e -> Log.e("AdminFix", "Failed to create admin doc: " + e.getMessage()));
+              } else {
+                  String role = doc.getString("role");
+                  Log.d("AdminFix", "Admin doc exists, current role: " + role);
+                  
+                  // Ensure role is exactly 'admin' if it's missing or different
+                  if (role == null || !role.equalsIgnoreCase("admin")) {
+                      mFirestore.collection("users")
+                        .document(user.getUid())
+                        .update("role", "admin");
+                  }
+              }
+          });
     }
 
     private void initViews() {
@@ -194,7 +233,7 @@ public class AdminDashboardActivity extends AppCompatActivity {
         if (cardApprovals != null) cardApprovals.setOnClickListener(approvalsClick);
         
         if (cardReports != null) cardReports.setOnClickListener(v -> startActivity(new Intent(this, ReportsActivity.class)));
-        if (cardViewComplaints != null) cardViewComplaints.setOnClickListener(v -> startActivity(new Intent(this, AdminComplaintsActivity.class)));
+        if (cardViewComplaints != null) cardViewComplaints.setOnClickListener(v -> startActivity(new Intent(this, AdminComplaintActivity.class)));
         
         if (cardCreateBill != null) cardCreateBill.setOnClickListener(v -> startActivity(new Intent(this, AdminCreateBillActivity.class)));
         if (cardBillHistory != null) cardBillHistory.setOnClickListener(v -> startActivity(new Intent(this, AdminMaintenanceActivity.class)));

@@ -22,6 +22,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 
@@ -38,6 +39,11 @@ public class VisitorLogsActivity extends AppCompatActivity {
     private List<Visitor> visitorList = new ArrayList<>();
     private List<Visitor> filteredList = new ArrayList<>();
     private ListenerRegistration logsListener;
+
+    // List of purposes to exclude from Visitor Logs and move to Delivery Logs
+    private static final List<String> EXCLUDED_PURPOSES = Arrays.asList(
+            "Delivery", "Flipkart", "Swiggy", "Amazon", "Zomato"
+    );
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,8 +73,6 @@ public class VisitorLogsActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         rvVisitors.setLayoutManager(new LinearLayoutManager(this));
-        // role "admin" to see all logs
-        // Using VisitorAdapter from the same package which matches the constructor arguments
         adapter = new VisitorAdapter(filteredList, "admin", null); 
         rvVisitors.setAdapter(adapter);
     }
@@ -130,6 +134,10 @@ public class VisitorLogsActivity extends AppCompatActivity {
                 for (DocumentSnapshot doc : snapshots.getDocuments()) {
                     Visitor visitor = doc.toObject(Visitor.class);
                     if (visitor != null) {
+                        // EXCLUDE "Delivery" and specific services from Visitor Logs
+                        String purpose = doc.getString("purpose");
+                        if (isExcluded(purpose)) continue;
+
                         visitor.setVisitorId(doc.getId());
                         visitorList.add(visitor);
                     }
@@ -137,6 +145,16 @@ public class VisitorLogsActivity extends AppCompatActivity {
             }
             filterLogs(etSearch.getText().toString());
         });
+    }
+
+    private boolean isExcluded(String purpose) {
+        if (purpose == null) return false;
+        for (String excluded : EXCLUDED_PURPOSES) {
+            if (excluded.equalsIgnoreCase(purpose.trim())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void filterLogs(String query) {

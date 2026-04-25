@@ -1,6 +1,7 @@
 package com.example.securiodb;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -17,10 +18,11 @@ import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class LiveStatusActivity extends AppCompatActivity implements StatusAdapter.OnExitClickListener {
+public class LiveStatusActivity extends AppCompatActivity implements StatusAdapter.OnEntryActionListener {
 
     private RecyclerView rvLiveStatus;
     private TextView tvLiveCount, tvEmpty;
@@ -54,13 +56,13 @@ public class LiveStatusActivity extends AppCompatActivity implements StatusAdapt
     }
 
     private void setupRealtimeListener() {
-        // Query for everyone currently inside. 
-        // We now include "Pending" status so they appear immediately when the guard sends the entry.
+        // Real-time listener for Approved visitors/deliveries currently inside
+        // Criteria: status == "Approved" AND exitTime == null
         registration = db.collection("visitors")
-                .whereEqualTo("exitTime", null)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .whereEqualTo("status", "Approved")
                 .addSnapshotListener((value, error) -> {
                     if (error != null) {
+                        Log.e("LiveStatus", "Error fetching live status", error);
                         Toast.makeText(this, "Error: " + error.getMessage(), Toast.LENGTH_SHORT).show();
                         return;
                     }
@@ -70,16 +72,29 @@ public class LiveStatusActivity extends AppCompatActivity implements StatusAdapt
                         for (DocumentSnapshot doc : value.getDocuments()) {
                             Map<String, Object> data = doc.getData();
                             if (data != null) {
-                                String status = (String) data.get("status");
-                                // Show if it's already Approved OR if it's still Pending (just sent)
-                                if ("Approved".equalsIgnoreCase(status) || "Pending".equalsIgnoreCase(status)) {
+                                // Double check exitTime is null (Filtering in Java to avoid composite index requirement)
+                                if (data.get("exitTime") == null) {
                                     data.put("id", doc.getId());
                                     entries.add(data);
                                 }
                             }
                         }
+
+                        // Manually sort by entryTime/timestamp descending (newest first)
+                        Collections.sort(entries, (m1, m2) -> {
+                            Object t1 = m1.get("timestamp");
+                            Object t2 = m2.get("timestamp");
+                            if (t1 == null) t1 = m1.get("entryTime");
+                            if (t2 == null) t2 = m2.get("entryTime");
+
+                            if (t1 instanceof com.google.firebase.Timestamp && t2 instanceof com.google.firebase.Timestamp) {
+                                return ((com.google.firebase.Timestamp) t2).compareTo((com.google.firebase.Timestamp) t1);
+                            }
+                            return 0;
+                        });
+
                         adapter.updateList(entries);
-                        tvLiveCount.setText("Active: " + entries.size());
+                        tvLiveCount.setText("Active Inside: " + entries.size());
                         tvEmpty.setVisibility(entries.isEmpty() ? View.VISIBLE : View.GONE);
                     }
                 });
@@ -89,7 +104,11 @@ public class LiveStatusActivity extends AppCompatActivity implements StatusAdapt
     public void onExitClick(String docId) {
         db.collection("visitors").document(docId)
                 .update("exitTime", FieldValue.serverTimestamp())
-                .addOnSuccessListener(aVoid -> Toast.makeText(this, "Exit marked", Toast.LENGTH_SHORT).show());
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Exit marked successfully", Toast.LENGTH_SHORT).show();
+                    // The realtime listener will automatically remove the item since exitTime is no longer null
+                })
+                .addOnFailureListener(e -> Toast.makeText(this, "Failed to mark exit: " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 
     @Override

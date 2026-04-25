@@ -1,6 +1,7 @@
 package com.example.securiodb.adapter;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -56,7 +57,6 @@ public class VisitorRequestAdapter extends
         String flatNo  = getStr(visitor, "flatNumber", getStr(visitor, "flatNo", "—"));
         String purpose = getStr(visitor, "purpose", "—");
         
-        // Try multiple possible image URL keys
         String imageUrl = getStr(visitor, "imageUrl", getStr(visitor, "photoUrl", ""));
 
         h.tvName.setText(name);
@@ -64,7 +64,6 @@ public class VisitorRequestAdapter extends
         h.tvFlat.setText("🏠 Flat: " + flatNo);
         h.tvPurpose.setText("📋 Purpose: " + purpose);
 
-        // Load Visitor Image
         if (imageUrl != null && !imageUrl.isEmpty()) {
             Glide.with(context)
                 .load(imageUrl)
@@ -76,7 +75,6 @@ public class VisitorRequestAdapter extends
             h.ivVisitorPhoto.setImageResource(android.R.drawable.ic_menu_report_image);
         }
 
-        // Format timestamp
         Object ts = visitor.get("timestamp");
         if (ts instanceof Timestamp) {
             SimpleDateFormat sdf = new SimpleDateFormat(
@@ -90,16 +88,22 @@ public class VisitorRequestAdapter extends
             h.tvTime.setText("Just now");
         }
 
-        // Button listeners with null safety
+        // Action listeners
         h.btnApprove.setOnClickListener(v -> {
-            if (docId != null) onApprove.onAction(docId, h.getAdapterPosition());
+            int currentPos = h.getAdapterPosition();
+            if (docId != null && onApprove != null && currentPos != RecyclerView.NO_POSITION) {
+                onApprove.onAction(docId, currentPos);
+            }
         });
+        
         h.btnReject.setOnClickListener(v -> {
-            if (docId != null) onReject.onAction(docId, h.getAdapterPosition());
+            int currentPos = h.getAdapterPosition();
+            if (docId != null && onReject != null && currentPos != RecyclerView.NO_POSITION) {
+                onReject.onAction(docId, currentPos);
+            }
         });
     }
 
-    // Safe string getter — prevents NPE on missing Firestore fields
     private String getStr(Map<String, Object> map, String key, String def) {
         Object val = map.get(key);
         if (val == null) return def;
